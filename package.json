@@ -1,0 +1,15 @@
+{
+  "name": "evm-balance-simulator",
+  "version": "0.0.1",
+  "description": "Simulate EVM balance changes",
+  "main": "dist/index.js",
+  "author": "George Roman",
+  "license": "MIT",
+  "private": false,
+  "dependencies": {
+    "ethers": "^5.6.9"
+  },
+  "devDependencies": {
+    "@types/node": "^18.6.2"
+  }
+}
