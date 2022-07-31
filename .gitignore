@@ -7,3 +7,6 @@ tsconfig.tsbuildinfo
 
 # Error files
 yarn-error.log
+
+# Secrets
+.npmrc

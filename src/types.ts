@@ -5,6 +5,7 @@ export interface CallTrace {
   input: string;
   output: string;
   value?: string;
+  error?: string;
   calls?: CallTrace[];
 }
 
