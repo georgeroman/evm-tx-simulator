@@ -1,5 +1,9 @@
 # Dependencies
 node_modules
 
+# Build files
+dist
+tsconfig.tsbuildinfo
+
 # Error files
 yarn-error.log
