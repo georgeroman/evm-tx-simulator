@@ -43,6 +43,10 @@ export const simulateTx = async (
       value: hex(tx.value),
       gas: tx.gas !== undefined && hex(tx.gas),
       gasPrice: tx.gasPrice !== undefined && hex(tx.gasPrice),
+    },
+    "latest",
+    {
+      tracer: "callTracer",
       stateOverrides:
         tx.balanceOverrides !== undefined &&
         Object.fromEntries(
@@ -51,10 +55,6 @@ export const simulateTx = async (
             { balance: hex(balance) },
           ])
         ),
-    },
-    "latest",
-    {
-      tracer: "callTracer",
     },
   ]);
 
