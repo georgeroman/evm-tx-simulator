@@ -83,7 +83,7 @@ const internalParseCallTrace = (state: GlobalState, trace: CallTrace) => {
   }
 };
 
-export const parseCallTrace = (trace: CallTrace) => {
+export const parseCallTrace = (trace: CallTrace): GlobalState => {
   const state = {};
   internalParseCallTrace(state, trace);
 
