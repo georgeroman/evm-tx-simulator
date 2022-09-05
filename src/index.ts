@@ -6,23 +6,6 @@ import { hex } from "./utils";
 
 import type { CallTrace, GlobalState } from "./types";
 
-const parseCallTrace = (state: GlobalState, trace: CallTrace) => {
-  if (!trace.error) {
-    if (trace.type === "CALL") {
-      const handlers = getHandlers(trace);
-      for (const { handle } of handlers) {
-        handle(state, trace);
-      }
-    }
-
-    if (trace.type === "CALL" || trace.type === "DELEGATECALL") {
-      for (const call of trace.calls ?? []) {
-        parseCallTrace(state, call);
-      }
-    }
-  }
-};
-
 type TxData = {
   from: string;
   to: string;
@@ -35,10 +18,10 @@ type TxData = {
   };
 };
 
-export const simulateNewTx = async (
+export const getCallTrace = async (
   tx: TxData,
   provider: JsonRpcProvider
-): Promise<GlobalState> => {
+): Promise<CallTrace> => {
   const trace: CallTrace = await provider.send("debug_traceCall", [
     {
       ...tx,
@@ -64,16 +47,13 @@ export const simulateNewTx = async (
     throw new Error("execution-reverted");
   }
 
-  const state = {};
-  parseCallTrace(state, trace);
-
-  return state;
+  return trace;
 };
 
-export const simulateExistingTx = async (
+export const getTransactionTrace = async (
   txHash: string,
   provider: JsonRpcProvider
-): Promise<GlobalState> => {
+): Promise<CallTrace> => {
   const trace: CallTrace = await provider.send("debug_traceTransaction", [
     txHash,
     { tracer: "callTracer" },
@@ -83,8 +63,29 @@ export const simulateExistingTx = async (
     throw new Error("execution-reverted");
   }
 
+  return trace;
+};
+
+const internalParseCallTrace = (state: GlobalState, trace: CallTrace) => {
+  if (!trace.error) {
+    if (trace.type === "CALL") {
+      const handlers = getHandlers(trace);
+      for (const { handle } of handlers) {
+        handle(state, trace);
+      }
+    }
+
+    if (trace.type === "CALL" || trace.type === "DELEGATECALL") {
+      for (const call of trace.calls ?? []) {
+        internalParseCallTrace(state, call);
+      }
+    }
+  }
+};
+
+export const parseCallTrace = (trace: CallTrace) => {
   const state = {};
-  parseCallTrace(state, trace);
+  internalParseCallTrace(state, trace);
 
   return state;
 };
@@ -92,10 +93,10 @@ export const simulateExistingTx = async (
 // For testing only
 // const main = async () => {
 //   const provider = new JsonRpcProvider(process.env.RPC_URL);
-//   const result = await simulateExistingTx(
+//   const result = await getTransactionTrace(
 //     "0x6822010a3c0963e31459a65e90f780d4928cd01c9ef8798e42ec9daba576c4b8",
 //     provider
 //   );
-//   console.log(result);
+//   console.log(parseCallTrace(result));
 // };
 // main();
