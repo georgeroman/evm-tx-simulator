@@ -26,8 +26,8 @@ export const getCallTrace = async (
     {
       ...call,
       value: hex(call.value),
-      gas: call.gas && hex(call.gas),
-      gasPrice: call.gasPrice && hex(call.gasPrice),
+      gas: call.gas !== undefined && hex(call.gas),
+      gasPrice: call.gasPrice !== undefined && hex(call.gasPrice),
     },
     "latest",
     {
