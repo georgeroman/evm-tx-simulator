@@ -1,5 +1,7 @@
+export type CallType = "CALL" | "STATICCALL" | "DELEGATECALL";
+
 export interface CallTrace {
-  type: string;
+  type: CallType;
   from: string;
   to: string;
   input: string;

@@ -4,9 +4,9 @@ import { JsonRpcProvider } from "@ethersproject/providers";
 import { getHandlers } from "./handlers";
 import { hex } from "./utils";
 
-import type { CallTrace, GlobalState } from "./types";
+import type { CallTrace, CallType, GlobalState } from "./types";
 
-type TxData = {
+type Call = {
   from: string;
   to: string;
   data: string;
@@ -19,23 +19,23 @@ type TxData = {
 };
 
 export const getCallTrace = async (
-  tx: TxData,
+  call: Call,
   provider: JsonRpcProvider
 ): Promise<CallTrace> => {
   const trace: CallTrace = await provider.send("debug_traceCall", [
     {
-      ...tx,
-      value: hex(tx.value),
-      gas: tx.gas && hex(tx.gas),
-      gasPrice: tx.gasPrice && hex(tx.gasPrice),
+      ...call,
+      value: hex(call.value),
+      gas: call.gas && hex(call.gas),
+      gasPrice: call.gasPrice && hex(call.gasPrice),
     },
     "latest",
     {
       tracer: "callTracer",
       stateOverrides:
-        tx.balanceOverrides &&
+        call.balanceOverrides &&
         Object.fromEntries(
-          Object.entries(tx.balanceOverrides).map(([address, balance]) => [
+          Object.entries(call.balanceOverrides).map(([address, balance]) => [
             address,
             { balance: hex(balance) },
           ])
@@ -50,12 +50,16 @@ export const getCallTrace = async (
   return trace;
 };
 
-export const getTransactionTrace = async (
-  txHash: string,
+type Tx = {
+  hash: string;
+};
+
+export const getTxTrace = async (
+  tx: Tx,
   provider: JsonRpcProvider
 ): Promise<CallTrace> => {
   const trace: CallTrace = await provider.send("debug_traceTransaction", [
-    txHash,
+    tx.hash,
     { tracer: "callTracer" },
   ]);
 
@@ -90,11 +94,48 @@ export const parseCallTrace = (trace: CallTrace): GlobalState => {
   return state;
 };
 
+export const searchForCall = (
+  trace: CallTrace,
+  options: { to?: string; type?: CallType; sigHashes?: string[] },
+  nth = 0
+): CallTrace | undefined => {
+  let match = true;
+  if (options.to && trace.to !== options.to) {
+    match = false;
+  }
+  if (options.type && trace.type !== options.type) {
+    match = false;
+  }
+  if (
+    options.sigHashes &&
+    !options.sigHashes.includes(trace.input.slice(0, 10))
+  ) {
+    match = false;
+  }
+
+  if (match) {
+    if (nth === 0) {
+      return trace;
+    } else {
+      nth--;
+    }
+  }
+
+  for (const call of trace.calls ?? []) {
+    const result = searchForCall(call, options, nth);
+    if (result) {
+      return result;
+    }
+  }
+};
+
 // For testing only
 // const main = async () => {
 //   const provider = new JsonRpcProvider(process.env.RPC_URL);
-//   const result = await getTransactionTrace(
-//     "0x6822010a3c0963e31459a65e90f780d4928cd01c9ef8798e42ec9daba576c4b8",
+//   const result = await getTxTrace(
+//     {
+//       hash: "0x6822010a3c0963e31459a65e90f780d4928cd01c9ef8798e42ec9daba576c4b8",
+//     },
 //     provider
 //   );
 //   console.log(parseCallTrace(result));
