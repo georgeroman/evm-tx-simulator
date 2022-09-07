@@ -112,6 +112,9 @@ export const searchForCall = (
   ) {
     match = false;
   }
+  if (trace.error) {
+    match = false;
+  }
 
   if (match) {
     if (nth === 0) {
@@ -121,10 +124,12 @@ export const searchForCall = (
     }
   }
 
-  for (const call of trace.calls ?? []) {
-    const result = searchForCall(call, options, nth);
-    if (result) {
-      return result;
+  if (!trace.error) {
+    for (const call of trace.calls ?? []) {
+      const result = searchForCall(call, options, nth);
+      if (result) {
+        return result;
+      }
     }
   }
 };
