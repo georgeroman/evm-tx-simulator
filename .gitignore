@@ -10,3 +10,6 @@ yarn-error.log
 
 # Secrets
 .npmrc
+
+# Tests
+src/test.ts

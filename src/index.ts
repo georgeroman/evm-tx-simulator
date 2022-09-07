@@ -133,16 +133,3 @@ export const searchForCall = (
     }
   }
 };
-
-// For testing only
-// const main = async () => {
-//   const provider = new JsonRpcProvider(process.env.RPC_URL);
-//   const result = await getTxTrace(
-//     {
-//       hash: "0x6822010a3c0963e31459a65e90f780d4928cd01c9ef8798e42ec9daba576c4b8",
-//     },
-//     provider
-//   );
-//   console.log(parseCallTrace(result));
-// };
-// main();
