@@ -94,11 +94,16 @@ export const parseCallTrace = (trace: CallTrace): GlobalState => {
   return state;
 };
 
+// For keeping the state across recursive calls
+let _nth = 0;
+
 export const searchForCall = (
   trace: CallTrace,
   options: { to?: string; type?: CallType; sigHashes?: string[] },
   nth = 0
 ): CallTrace | undefined => {
+  _nth = nth;
+
   let match = true;
   if (options.to && trace.to !== options.to) {
     match = false;
@@ -117,16 +122,16 @@ export const searchForCall = (
   }
 
   if (match) {
-    if (nth === 0) {
+    if (_nth === 0) {
       return trace;
     } else {
-      nth--;
+      _nth--;
     }
   }
 
   if (!trace.error) {
     for (const call of trace.calls ?? []) {
-      const result = searchForCall(call, options, nth);
+      const result = searchForCall(call, options, _nth);
       if (result) {
         return result;
       }
