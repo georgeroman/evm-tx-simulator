@@ -227,7 +227,7 @@ export const handlers: CallHandler[] = [
         adjustBalance(state, {
           token,
           address: args.from,
-          adjustment: -args.value[i].mul(-1),
+          adjustment: args.value[i].mul(-1),
         });
         adjustBalance(state, {
           token,
