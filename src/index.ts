@@ -20,7 +20,10 @@ type Call = {
 
 export const getCallTrace = async (
   call: Call,
-  provider: JsonRpcProvider
+  provider: JsonRpcProvider,
+  options?: {
+    skipReverts?: boolean;
+  }
 ): Promise<CallTrace> => {
   const trace: CallTrace = await provider.send("debug_traceCall", [
     {
@@ -43,7 +46,7 @@ export const getCallTrace = async (
     },
   ]);
 
-  if (trace.error) {
+  if (!options?.skipReverts && trace.error) {
     throw new Error("execution-reverted");
   }
 
