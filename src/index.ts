@@ -16,6 +16,10 @@ type Call = {
   balanceOverrides?: {
     [address: string]: BigNumberish;
   };
+  blockOverrides?: {
+    number?: number;
+    timestamp?: number;
+  };
 };
 
 export const getCallTrace = async (
@@ -43,6 +47,11 @@ export const getCallTrace = async (
             { balance: hex(balance) },
           ])
         ),
+      blockOverrides: call.blockOverrides && {
+        number: call.blockOverrides.number && hex(call.blockOverrides.number),
+        time:
+          call.blockOverrides.timestamp && hex(call.blockOverrides.timestamp),
+      },
     },
   ]);
 
