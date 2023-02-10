@@ -4,7 +4,7 @@ import { AddressZero } from "@ethersproject/constants";
 
 import { bn } from "../../utils";
 
-import type { CallHandler, CallTrace, GlobalState } from "../../types";
+import type { CallHandler, CallTrace, Payment, StateChange } from "../../types";
 
 const iface = new Interface([
   // ERC20
@@ -20,7 +20,7 @@ const iface = new Interface([
 ]);
 
 const adjustBalance = (
-  state: GlobalState,
+  state: StateChange,
   data: {
     address: string;
     token: string;
@@ -60,7 +60,7 @@ const adjustBalance = (
 export const handlers: CallHandler[] = [
   // Native token transfer
   {
-    handle: (state: GlobalState, trace: CallTrace) => {
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       const value = bn(trace.value ?? 0);
       if (value.gt(0)) {
         const token = `native:${AddressZero}`;
@@ -75,13 +75,20 @@ export const handlers: CallHandler[] = [
           address: trace.to,
           adjustment: value,
         });
+
+        payments.push({
+          from: trace.from,
+          to: trace.to,
+          token,
+          amount: value.toString(),
+        });
       }
     },
   },
   // ERC20 "transfer"
   {
     selector: iface.getSighash("transfer"),
-    handle: (state: GlobalState, trace: CallTrace) => {
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       const args = iface.decodeFunctionData("transfer", trace.input);
       const token = `erc20:${trace.to}`;
 
@@ -95,12 +102,19 @@ export const handlers: CallHandler[] = [
         address: args.to,
         adjustment: args.value,
       });
+
+      payments.push({
+        from: trace.from,
+        to: trace.to,
+        token,
+        amount: args.value.toString(),
+      });
     },
   },
   // ERC20 "transferFrom"
   {
     selector: iface.getSighash("transferFrom"),
-    handle: (state: GlobalState, trace: CallTrace) => {
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       // The way to differentiate ERC20 from ERC721 "transferFrom"
       // is by checking the return value (which is a boolean value
       // for ERC20 and is missing for ERC721)
@@ -118,13 +132,20 @@ export const handlers: CallHandler[] = [
           address: args.to,
           adjustment: args.valueOrTokenId,
         });
+
+        payments.push({
+          from: trace.from,
+          to: trace.to,
+          token,
+          amount: args.valueOrTokenId.toString(),
+        });
       }
     },
   },
   // ERC721 "transferFrom"
   {
     selector: iface.getSighash("transferFrom"),
-    handle: (state: GlobalState, trace: CallTrace) => {
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       // The way to differentiate ERC20 from ERC721 "transferFrom"
       // is by checking the return value (which is a boolean value
       // for ERC20 and is missing for ERC721)
@@ -142,13 +163,20 @@ export const handlers: CallHandler[] = [
           address: args.to,
           adjustment: 1,
         });
+
+        payments.push({
+          from: trace.from,
+          to: trace.to,
+          token,
+          amount: "1",
+        });
       }
     },
   },
   // ERC721 "safeTransferFrom"
   {
     selector: iface.getSighash("safeTransferFrom(address,address,uint256)"),
-    handle: (state: GlobalState, trace: CallTrace) => {
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       const args = iface.decodeFunctionData(
         "safeTransferFrom(address,address,uint256)",
         trace.input
@@ -165,13 +193,20 @@ export const handlers: CallHandler[] = [
         address: args.to,
         adjustment: 1,
       });
+
+      payments.push({
+        from: trace.from,
+        to: trace.to,
+        token,
+        amount: "1",
+      });
     },
   },
   {
     selector: iface.getSighash(
       "safeTransferFrom(address,address,uint256,bytes)"
     ),
-    handle: (state: GlobalState, trace: CallTrace) => {
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       const args = iface.decodeFunctionData(
         "safeTransferFrom(address,address,uint256,bytes)",
         trace.input
@@ -188,6 +223,13 @@ export const handlers: CallHandler[] = [
         address: args.to,
         adjustment: 1,
       });
+
+      payments.push({
+        from: trace.from,
+        to: trace.to,
+        token,
+        amount: "1",
+      });
     },
   },
   // ERC1155 "safeTransferFrom"
@@ -195,7 +237,7 @@ export const handlers: CallHandler[] = [
     selector: iface.getSighash(
       "safeTransferFrom(address,address,uint256,uint256,bytes)"
     ),
-    handle: (state: GlobalState, trace: CallTrace) => {
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       const args = iface.decodeFunctionData(
         "safeTransferFrom(address,address,uint256,uint256,bytes)",
         trace.input
@@ -212,11 +254,18 @@ export const handlers: CallHandler[] = [
         address: args.to,
         adjustment: args.value,
       });
+
+      payments.push({
+        from: trace.from,
+        to: trace.to,
+        token,
+        amount: args.value.toString(),
+      });
     },
   },
   {
     selector: iface.getSighash("safeBatchTransferFrom"),
-    handle: (state: GlobalState, trace: CallTrace) => {
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       const args = iface.decodeFunctionData(
         "safeBatchTransferFrom",
         trace.input
@@ -233,6 +282,13 @@ export const handlers: CallHandler[] = [
           token,
           address: args.to,
           adjustment: args.value[i],
+        });
+
+        payments.push({
+          from: trace.from,
+          to: trace.to,
+          token,
+          amount: args.value[i].toString(),
         });
       }
     },

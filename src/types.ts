@@ -13,7 +13,7 @@ export interface CallTrace {
 
 export type CallHandler = {
   selector?: string;
-  handle: (state: GlobalState, trace: CallTrace) => void;
+  handle: (state: StateChange, payments: Payment[], trace: CallTrace) => void;
 };
 
 // Each `token` field below has the following format:
@@ -22,14 +22,17 @@ export type CallHandler = {
 // - `erc721:${TOKEN_ADDRESS}:${TOKEN_ID}` - used for ERC721 tokens
 // - `erc1155:${TOKEN_ADDRESS}:${TOKEN_ID}` - used for ERC1155 tokens
 
-// Mapping from token address to balance changes (in the context of an address state)
-type TokenBalanceState = { [token: string]: string };
-
-// State changes of a particular address
-type AddressState = {
-  tokenBalanceState: TokenBalanceState;
+export type StateChange = {
+  // State changes of a particular address
+  [address: string]: {
+    // Mapping from token address to balance changes (in the context of an address state)
+    tokenBalanceState: { [token: string]: string };
+  };
 };
 
-export type GlobalState = {
-  [address: string]: AddressState;
+export type Payment = {
+  from: string;
+  to: string;
+  token: string;
+  amount: string;
 };

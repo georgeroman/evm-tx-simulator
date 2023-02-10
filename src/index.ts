@@ -4,7 +4,7 @@ import { JsonRpcProvider } from "@ethersproject/providers";
 import { getHandlers } from "./handlers";
 import { hex } from "./utils";
 
-import type { CallTrace, CallType, GlobalState } from "./types";
+import type { CallTrace, CallType, Payment, StateChange } from "./types";
 
 type Call = {
   from: string;
@@ -82,28 +82,39 @@ export const getTxTrace = async (
   return trace;
 };
 
-const internalParseCallTrace = (state: GlobalState, trace: CallTrace) => {
+const internalParseCallTrace = (
+  state: StateChange,
+  payments: Payment[],
+  trace: CallTrace
+) => {
   if (!trace.error) {
     if (trace.type === "CALL") {
       const handlers = getHandlers(trace);
       for (const { handle } of handlers) {
-        handle(state, trace);
+        handle(state, payments, trace);
       }
     }
 
     if (trace.type === "CALL" || trace.type === "DELEGATECALL") {
       for (const call of trace.calls ?? []) {
-        internalParseCallTrace(state, call);
+        internalParseCallTrace(state, payments, call);
       }
     }
   }
 };
 
-export const parseCallTrace = (trace: CallTrace): GlobalState => {
-  const state = {};
-  internalParseCallTrace(state, trace);
+export const getStateChange = (trace: CallTrace): StateChange => {
+  const state: StateChange = {};
+  internalParseCallTrace(state, [], trace);
 
   return state;
+};
+
+export const getPayments = (trace: CallTrace): Payment[] => {
+  const payments: Payment[] = [];
+  internalParseCallTrace({}, payments, trace);
+
+  return payments;
 };
 
 // For keeping the state across recursive calls
