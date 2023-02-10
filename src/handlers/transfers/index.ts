@@ -105,7 +105,7 @@ export const handlers: CallHandler[] = [
 
       payments.push({
         from: trace.from,
-        to: trace.to,
+        to: args.to,
         token,
         amount: args.value.toString(),
       });
@@ -134,8 +134,8 @@ export const handlers: CallHandler[] = [
         });
 
         payments.push({
-          from: trace.from,
-          to: trace.to,
+          from: args.from,
+          to: args.to,
           token,
           amount: args.valueOrTokenId.toString(),
         });
@@ -165,8 +165,8 @@ export const handlers: CallHandler[] = [
         });
 
         payments.push({
-          from: trace.from,
-          to: trace.to,
+          from: args.from,
+          to: args.to,
           token,
           amount: "1",
         });
@@ -195,8 +195,8 @@ export const handlers: CallHandler[] = [
       });
 
       payments.push({
-        from: trace.from,
-        to: trace.to,
+        from: args.from,
+        to: args.to,
         token,
         amount: "1",
       });
@@ -225,8 +225,8 @@ export const handlers: CallHandler[] = [
       });
 
       payments.push({
-        from: trace.from,
-        to: trace.to,
+        from: args.from,
+        to: args.to,
         token,
         amount: "1",
       });
@@ -256,8 +256,8 @@ export const handlers: CallHandler[] = [
       });
 
       payments.push({
-        from: trace.from,
-        to: trace.to,
+        from: args.from,
+        to: args.to,
         token,
         amount: args.value.toString(),
       });
@@ -285,8 +285,8 @@ export const handlers: CallHandler[] = [
         });
 
         payments.push({
-          from: trace.from,
-          to: trace.to,
+          from: args.from,
+          to: args.to,
           token,
           amount: args.value[i].toString(),
         });

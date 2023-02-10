@@ -1,6 +1,6 @@
 {
   "name": "@georgeroman/evm-tx-simulator",
-  "version": "0.0.14",
+  "version": "0.0.15",
   "description": "Simulate any potential EVM transaction",
   "license": "MIT",
   "author": "George Roman",
