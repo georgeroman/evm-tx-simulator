@@ -1,5 +1,6 @@
 import { BigNumberish } from "@ethersproject/bignumber";
 import { JsonRpcProvider } from "@ethersproject/providers";
+import axios from "axios";
 
 import { getHandlers } from "./handlers";
 import { hex } from "./utils";
@@ -66,20 +67,30 @@ type Tx = {
   hash: string;
 };
 
-export const getTxTrace = async (
-  tx: Tx,
+export const getTxTraces = async (
+  txs: Tx[],
   provider: JsonRpcProvider
-): Promise<CallTrace> => {
-  const trace: CallTrace = await provider.send("debug_traceTransaction", [
-    tx.hash,
-    { tracer: "callTracer" },
-  ]);
+): Promise<{ [txHash: string]: CallTrace }> => {
+  const results = await axios
+    .post(
+      provider.connection.url,
+      txs.map((tx, i) => ({
+        method: "debug_traceTransaction",
+        params: [tx.hash, { tracer: "callTracer" }],
+        jsonrpc: "2.0",
+        id: i,
+      })),
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    )
+    .then((response) => response.data as { id: number; result: CallTrace }[]);
 
-  if (trace.error) {
-    throw new Error("execution-reverted");
-  }
-
-  return trace;
+  return Object.fromEntries(
+    results.map(({ id, result }) => [txs[id].hash, result])
+  );
 };
 
 const internalParseCallTrace = (
