@@ -149,7 +149,7 @@ export const handlers: CallHandler[] = [
       // The way to differentiate ERC20 from ERC721 "transferFrom"
       // is by checking the return value (which is a boolean value
       // for ERC20 and is missing for ERC721)
-      if (trace.output === "0x") {
+      if (!trace.output || trace.output === "0x") {
         const args = iface.decodeFunctionData("transferFrom", trace.input);
         const token = `erc721:${trace.to}:${args.valueOrTokenId.toString()}`;
 
