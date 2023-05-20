@@ -1,5 +1,11 @@
 export type CallType = "CALL" | "STATICCALL" | "DELEGATECALL";
 
+export type Log = {
+  address: string;
+  topics: string[];
+  data: string;
+};
+
 export interface CallTrace {
   type: CallType;
   from: string;
@@ -9,6 +15,7 @@ export interface CallTrace {
   value?: string;
   error?: string;
   calls?: CallTrace[];
+  logs?: Log[];
 }
 
 export type CallHandler = {
