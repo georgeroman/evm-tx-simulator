@@ -28,6 +28,7 @@ export const getCallTrace = async (
   provider: JsonRpcProvider,
   options?: {
     skipReverts?: boolean;
+    includeLogs?: boolean;
   }
 ): Promise<CallTrace> => {
   const trace: CallTrace = await provider.send("debug_traceCall", [
@@ -40,6 +41,7 @@ export const getCallTrace = async (
     "latest",
     {
       tracer: "callTracer",
+      tracerConfig: options?.includeLogs ? { withLog: true } : undefined,
       stateOverrides:
         call.balanceOverrides &&
         Object.fromEntries(
