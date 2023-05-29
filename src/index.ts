@@ -5,15 +5,15 @@ import axios from "axios";
 import { getHandlers } from "./handlers";
 import { hex } from "./utils";
 
-import type { CallTrace, CallType, Payment, StateChange } from "./types";
+import type { CallTrace, CallType, Log, Payment, StateChange } from "./types";
 
 type Call = {
   from: string;
   to: string;
   data: string;
   value: BigNumberish;
-  gas?: BigNumberish;
-  gasPrice?: BigNumberish;
+  gas: BigNumberish;
+  gasPrice: BigNumberish;
   balanceOverrides?: {
     [address: string]: BigNumberish;
   };
@@ -35,8 +35,8 @@ export const getCallTrace = async (
     {
       ...call,
       value: hex(call.value),
-      gas: call.gas !== undefined && hex(call.gas),
-      gasPrice: call.gasPrice !== undefined && hex(call.gasPrice),
+      gas: hex(call.gas),
+      gasPrice: hex(call.gasPrice),
     },
     "latest",
     {
@@ -63,6 +63,123 @@ export const getCallTrace = async (
   }
 
   return trace;
+};
+
+export const getCallTraceLogs = async (
+  call: Call,
+  provider: JsonRpcProvider,
+  options?: {
+    method: "withLog" | "customTrace";
+  }
+): Promise<Log[]> => {
+  const method = options?.method ?? "customTrace";
+
+  const customTrace = `
+    {
+      logs: [],
+      reverted: false,
+
+      byte2Hex: function (byte) {
+        if (byte < 0x10) {
+          return '0' + byte.toString(16);
+        } return byte.toString(16);
+      },
+      arrayToHex: function (array) {
+        var value = '';
+        for (var i = 0; i < array.length; i++) {
+          value += this.byte2Hex(array[i]);
+        }
+        return '0x' + value;
+      },
+
+      step: function (log) {
+        var topicCount = (log.op.toString().match(/LOG(\\d)/) || [])[1];
+        if (topicCount) {
+          var result = {
+            address: this.arrayToHex(log.contract.getAddress()),
+            data: this.arrayToHex(log.memory.slice(parseInt(log.stack.peek(0)), parseInt(log.stack.peek(0)) + parseInt(log.stack.peek(1)))),
+            topics: []
+          };
+          for (var i = 0; i < topicCount; i++) {
+            result.topics.push('0x' + log.stack.peek(i + 2).toString(16).padStart(64, '0'));
+          }
+          this.logs.push(result);
+        }
+      },
+
+      fault: function (log) {
+        this.reverted = true;
+      },
+
+      result: function () {
+        return {
+          logs: this.logs,
+          reverted: this.reverted
+        };
+      }
+    }
+  `;
+
+  const trace: any = await provider.send("debug_traceCall", [
+    {
+      ...call,
+      value: hex(call.value),
+      gas: hex(call.gas),
+      gasPrice: hex(call.gasPrice),
+    },
+    "0x8A9E77",
+    {
+      tracer: method === "withLog" ? "callTracer" : customTrace,
+      tracerConfig: method === "withLog" ? { withLog: true } : undefined,
+      enableMemory: method === "customTrace" ? true : undefined,
+      enableReturnData: method === "customTrace" ? true : undefined,
+      disableStorage: method === "customTrace" ? true : undefined,
+      stateOverrides:
+        call.balanceOverrides &&
+        Object.fromEntries(
+          Object.entries(call.balanceOverrides).map(([address, balance]) => [
+            address,
+            { balance: hex(balance) },
+          ])
+        ),
+      blockOverrides: call.blockOverrides && {
+        number: call.blockOverrides.number && hex(call.blockOverrides.number),
+        time:
+          call.blockOverrides.timestamp && hex(call.blockOverrides.timestamp),
+      },
+    },
+  ]);
+
+  if (method === "withLog") {
+    const typedTrace = trace as CallTrace;
+
+    const getLogs = (call: CallTrace): Log[] => {
+      if (call.error) {
+        throw new Error("execution-reverted");
+      }
+
+      const logs: Log[] = [];
+      for (const c of call.calls ?? []) {
+        logs.push(...getLogs(c));
+      }
+      logs.push(...(call.logs ?? []));
+
+      return logs;
+    };
+
+    return getLogs(typedTrace);
+  } else {
+    const typedTrace = trace as {
+      logs: Log[];
+      reverted: boolean;
+    };
+
+    if (typedTrace.reverted) {
+      throw new Error("execution-reverted");
+    }
+
+    return typedTrace.logs;
+  }
 };
 
 type Tx = {
