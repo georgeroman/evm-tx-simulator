@@ -127,7 +127,7 @@ export const getCallTraceLogs = async (
       gas: hex(call.gas),
       gasPrice: hex(call.gasPrice),
     },
-    "0x8A9E77",
+    "latest",
     {
       tracer: method === "withLog" ? "callTracer" : customTrace,
       tracerConfig: method === "withLog" ? { withLog: true } : undefined,
