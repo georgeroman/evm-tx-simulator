@@ -23,6 +23,32 @@ type Call = {
   };
 };
 
+export const getCallResult = async (
+  call: Call,
+  provider: JsonRpcProvider
+): Promise<any> => {
+  if (call.blockOverrides) {
+    throw new Error("Block overrides not supported");
+  }
+
+  return provider.send("eth_call", [
+    {
+      ...call,
+      value: hex(call.value),
+      gas: hex(call.gas),
+      gasPrice: hex(call.gasPrice),
+    },
+    "latest",
+    call.balanceOverrides &&
+      Object.fromEntries(
+        Object.entries(call.balanceOverrides).map(([address, balance]) => [
+          address,
+          { balance: hex(balance) },
+        ])
+      ),
+  ]);
+};
+
 export const getCallTrace = async (
   call: Call,
   provider: JsonRpcProvider,
@@ -74,8 +100,48 @@ export const getCallTraceLogs = async (
 ): Promise<Log[]> => {
   const method = options?.method ?? "customTrace";
 
-  const customTrace =
-    "{logs: [], reverted: false, byte2Hex: function (byte) { if (byte < 0x10) { return '0' + byte.toString(16); } return byte.toString(16); }, arrayToHex: function (array) { var value = ''; for (var i = 0; i < array.length; i++) { value += this.byte2Hex(array[i]); } return '0x' + value; }, step: function (log) { var topicCount = (log.op.toString().match(/LOG(\\d)/) || [])[1]; if (topicCount) { var result = { address: this.arrayToHex(log.contract.getAddress()), data: this.arrayToHex(log.memory.slice(parseInt(log.stack.peek(0)), parseInt(log.stack.peek(0)) + parseInt(log.stack.peek(1)))), topics: [] }; for (var i = 0; i < topicCount; i++) { result.topics.push('0x' + log.stack.peek(i + 2).toString(16).padStart(64, '0')); } this.logs.push(result); } }, fault: function (log) { this.reverted = true; }, result: function () { return { logs: this.logs, reverted: this.reverted }; } }";
+  const customTrace = `
+    {
+      logs: [],
+      reverted: false,
+      byte2Hex: function (byte) {
+        if (byte < 0x10) {
+          return '0' + byte.toString(16);
+        }
+        return byte.toString(16);
+      },
+      arrayToHex: function (array) {
+        var value = '';
+        for (var i = 0; i < array.length; i++) {
+          value += this.byte2Hex(array[i]);
+        }
+        return '0x' + value;
+      },
+      step: function (log) {
+        var topicCount = (log.op.toString().match(/LOG(\\d)/) || [])[1];
+        if (topicCount) {
+          var result = {
+            address: this.arrayToHex(log.contract.getAddress()),
+            data: this.arrayToHex(log.memory.slice(parseInt(log.stack.peek(0)), parseInt(log.stack.peek(0)) + parseInt(log.stack.peek(1)))),
+            topics: []
+          };
+          for (var i = 0; i < topicCount; i++) {
+            result.topics.push('0x' + log.stack.peek(i + 2).toString(16).padStart(64, '0'));
+          }
+          this.logs.push(result);
+        }
+      },
+      fault: function (log) {
+        this.reverted = true;
+      },
+      result: function () {
+        return {
+          logs: this.logs,
+          reverted: this.reverted
+        };
+      }
+    }
+  `;
 
   const trace: any = await provider.send("debug_traceCall", [
     {
