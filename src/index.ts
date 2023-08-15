@@ -5,7 +5,14 @@ import axios from "axios";
 import { getHandlers } from "./handlers";
 import { hex } from "./utils";
 
-import type { CallTrace, CallType, Log, Payment, StateChange } from "./types";
+import type {
+  CallTrace,
+  CallTraceOpenEthereum,
+  CallType,
+  Log,
+  Payment,
+  StateChange,
+} from "./types";
 
 type Call = {
   from: string;
@@ -89,6 +96,29 @@ export const getCallTrace = async (
   }
 
   return trace;
+};
+
+export const getCallTraces = async (
+  calls: Call[],
+  provider: JsonRpcProvider
+) => {
+  const results: { trace: CallTraceOpenEthereum[] }[] = await provider.send(
+    "trace_callMany",
+    [
+      calls.map((call) => [
+        {
+          ...call,
+          value: hex(call.value),
+          gas: hex(call.gas),
+          gasPrice: hex(call.gasPrice),
+        },
+        ["trace"],
+      ]),
+      "latest",
+    ]
+  );
+
+  return results.map((r) => internalMapToGethTraceFormat(r.trace));
 };
 
 export const getCallTraceLogs = async (
@@ -235,27 +265,6 @@ export const getTxTraces = async (
   );
 };
 
-const internalParseCallTrace = (
-  state: StateChange,
-  payments: Payment[],
-  trace: CallTrace
-) => {
-  if (!trace.error) {
-    if (trace.type === "CALL") {
-      const handlers = getHandlers(trace);
-      for (const { handle } of handlers) {
-        handle(state, payments, trace);
-      }
-    }
-
-    if (trace.type === "CALL" || trace.type === "DELEGATECALL") {
-      for (const call of trace.calls ?? []) {
-        internalParseCallTrace(state, payments, call);
-      }
-    }
-  }
-};
-
 export const getStateChange = (trace: CallTrace): StateChange => {
   const state: StateChange = {};
   internalParseCallTrace(state, [], trace);
@@ -313,4 +322,53 @@ export const searchForCall = (
       }
     }
   }
+};
+
+// Internal methods
+
+const internalParseCallTrace = (
+  state: StateChange,
+  payments: Payment[],
+  trace: CallTrace
+) => {
+  if (!trace.error) {
+    if (trace.type === "CALL") {
+      const handlers = getHandlers(trace);
+      for (const { handle } of handlers) {
+        handle(state, payments, trace);
+      }
+    }
+
+    if (trace.type === "CALL" || trace.type === "DELEGATECALL") {
+      for (const call of trace.calls ?? []) {
+        internalParseCallTrace(state, payments, call);
+      }
+    }
+  }
+};
+
+const internalMapToGethTraceFormat = (
+  traces: CallTraceOpenEthereum[]
+): CallTrace => {
+  const initCallTrace = (trace: CallTraceOpenEthereum): CallTrace => ({
+    type: trace.action.callType.toUpperCase() as CallType,
+    from: trace.action.from,
+    to: trace.action.to,
+    input: trace.action.input,
+    output: trace.result.output,
+    value: trace.action.value,
+    error: trace.error,
+    calls: [],
+  });
+
+  const callTrace = initCallTrace(traces[0]);
+  for (const trace of traces.slice(1)) {
+    let relevantCallTrace = callTrace;
+    for (let i = 0; i < trace.traceAddress.length - 1; i++) {
+      relevantCallTrace = relevantCallTrace.calls![trace.traceAddress[i]];
+    }
+    relevantCallTrace.calls!.push(initCallTrace(trace));
+  }
+
+  return callTrace;
 };

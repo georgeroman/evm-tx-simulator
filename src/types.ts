@@ -18,6 +18,23 @@ export interface CallTrace {
   logs?: Log[];
 }
 
+export interface CallTraceOpenEthereum {
+  action: {
+    from: string;
+    callType: CallType;
+    input: string;
+    to: string;
+    value: string;
+    gas: string;
+  };
+  error?: string;
+  result: {
+    output: string;
+    gasUsed: string;
+  };
+  traceAddress: number[];
+}
+
 export type CallHandler = {
   selector?: string;
   handle: (state: StateChange, payments: Payment[], trace: CallTrace) => void;
