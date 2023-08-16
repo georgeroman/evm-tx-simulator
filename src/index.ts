@@ -102,6 +102,14 @@ export const getCallTraces = async (
   calls: Call[],
   provider: JsonRpcProvider
 ) => {
+  if (calls.some((call) => call.blockOverrides)) {
+    throw new Error("Block overrides not supported");
+  }
+
+  if (calls.some((call) => call.balanceOverrides)) {
+    throw new Error("Balance overrides not supported");
+  }
+
   const results: { trace: CallTraceOpenEthereum[] }[] = await provider.send(
     "trace_callMany",
     [
