@@ -1,6 +1,5 @@
 import { BigNumber } from "ethers";
-import { bytesToHex } from "@ethereumjs/util";
-import { arrayify, hexStripZeros, hexZeroPad } from "ethers/lib/utils";
+import { arrayify, hexStripZeros, hexZeroPad, hexlify } from "ethers/lib/utils";
 import { Log } from "./types";
 
 export interface LoggerTrace {
@@ -99,7 +98,7 @@ export function parseLogsFromTrace(to: string, trace: LoggerTrace) {
     let data = "0x";
     if (step.memory) {
       const memory = parseMemory(step.memory);
-      data = bytesToHex(memory.slice(mStart, mStart + mSize));
+      data = hexlify(memory.slice(mStart, mStart + mSize));
     }
 
     const currentAddress = (closestContext ?? topScopeContext).contract;

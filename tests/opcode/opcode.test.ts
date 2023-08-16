@@ -56,11 +56,13 @@ describe("Opcode - Parse Event", () => {
         c.topics.includes("0xbeee1e6e7fe307ddcf84b0a16137a4430ad5e2480fc4f4a8e250ab56ccd7630d") &&
         c.address === "0x881d40237659c251811cec9c364ef91dc08d300c"
     );
+   
     const RfqOrderFilled = eventLogs.find(
       (c) =>
         c.topics.includes("0x829fa99d94dc4636925b38632e625736a614c154d55006b7ab6bea979c210c32") &&
         c.address === "0xdef1c0ded9bec7f1a1670819833240f027b25eff"
     );
+
     expect(Swap).not.toBe(undefined);
     expect(RfqOrderFilled).not.toBe(undefined);
   });
