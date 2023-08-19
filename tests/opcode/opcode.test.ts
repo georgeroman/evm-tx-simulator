@@ -1,7 +1,7 @@
 
-import MultiTraceResponse from "./__fixtures__/multi.json";
-import MultiTraceResponse2 from "./__fixtures__/multi-2.json";
-import SingleTraceResponse from "./__fixtures__/single.json";
+import MultiTraceResponse from "./__fixtures__/multi-lite.json";
+import MultiTraceResponse2 from "./__fixtures__/multicall-2-lite.json";
+import SingleTraceResponse from "./__fixtures__/single-lite.json";
 
 import { parseLogsFromTrace, LoggerTrace as Trace } from "../../src/opcode";
 import { describe, it, expect } from "@jest/globals";
@@ -12,6 +12,7 @@ describe("Opcode - Parse Event", () => {
       "0xC2c862322E9c97D6244a3506655DA95F05246Fd8",
       MultiTraceResponse.result as Trace
     );
+
     const Approval = eventLogs.find(
       (c) =>
         c.topics.includes("0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925") &&
@@ -37,6 +38,7 @@ describe("Opcode - Parse Event", () => {
       "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       SingleTraceResponse.result as Trace
     );
+
     const Transfer = eventLogs.find(
       (c) =>
         c.topics.includes("0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef") &&
@@ -51,6 +53,7 @@ describe("Opcode - Parse Event", () => {
       "0x881D40237659C251811CEC9c364ef91dC08D300C",
       MultiTraceResponse2.result as Trace
     );
+
     const Swap = eventLogs.find(
       (c) =>
         c.topics.includes("0xbeee1e6e7fe307ddcf84b0a16137a4430ad5e2480fc4f4a8e250ab56ccd7630d") &&
