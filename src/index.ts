@@ -363,7 +363,7 @@ const internalMapToGethTraceFormat = (
     from: trace.action.from,
     to: trace.action.to,
     input: trace.action.input,
-    output: trace.result.output,
+    output: trace.result?.output || "0x",
     value: trace.action.value,
     error: trace.error,
     calls: [],
