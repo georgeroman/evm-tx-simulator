@@ -3,8 +3,8 @@ import { JsonRpcProvider } from "@ethersproject/providers";
 import axios from "axios";
 
 import { getHandlers } from "./handlers";
+import { parseLogsFromTrace } from "./opcode";
 import { hex } from "./utils";
-import { parseLogsFromTrace, LoggerTrace } from "./opcode";
 
 import type { CallTrace, CallType, Log, Payment, StateChange } from "./types";
 
@@ -96,7 +96,7 @@ export const getCallTraceLogs = async (
   call: Call,
   provider: JsonRpcProvider,
   options?: {
-    method: "withLog" | "customTrace" | "opcodeLogger";
+    method: "withLog" | "customTrace" | "opcodeTrace";
   }
 ): Promise<Log[]> => {
   const method = options?.method ?? "customTrace";
@@ -153,9 +153,21 @@ export const getCallTraceLogs = async (
     },
     "latest",
     {
-      tracer: method === "opcodeLogger" ? undefined : (method === "withLog" ? "callTracer" : customTrace),
-      tracerConfig: method === "opcodeLogger" ? undefined : method === "withLog" ? { withLog: true } : undefined,
-      enableMemory: ["customTrace", "opcodeLogger"].includes(method) ? true : undefined,
+      tracer:
+        method === "opcodeTrace"
+          ? undefined
+          : method === "withLog"
+          ? "callTracer"
+          : customTrace,
+      tracerConfig:
+        method === "opcodeTrace"
+          ? undefined
+          : method === "withLog"
+          ? { withLog: true }
+          : undefined,
+      enableMemory: ["customTrace", "opcodeTrace"].includes(method)
+        ? true
+        : undefined,
       enableReturnData: method === "customTrace" ? true : undefined,
       disableStorage: method === "customTrace" ? true : undefined,
       stateOverrides:
@@ -174,10 +186,8 @@ export const getCallTraceLogs = async (
     },
   ]);
 
-  if (method === "opcodeLogger") {
-    const loggerTrace = trace as LoggerTrace;
-    const parsedLogs = parseLogsFromTrace(call.to, loggerTrace);
-    return parsedLogs;
+  if (method === "opcodeTrace") {
+    return parseLogsFromTrace(call.to, trace);
   } else if (method === "withLog") {
     const typedTrace = trace as CallTrace;
 

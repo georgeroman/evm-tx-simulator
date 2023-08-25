@@ -1,14 +1,20 @@
-import { BigNumber } from "ethers";
-import { arrayify, hexStripZeros, hexZeroPad, hexlify } from "ethers/lib/utils";
-import { Log } from "./types";
+import {
+  arrayify,
+  hexStripZeros,
+  hexZeroPad,
+  hexlify,
+} from "@ethersproject/bytes";
 
-export interface LoggerTrace {
+import { Log } from "./types";
+import { bn } from "./utils";
+
+interface LoggerTrace {
   gas: number;
   returnValue: any;
   structLogs: StructLog[];
 }
 
-export interface StructLog {
+interface StructLog {
   depth: number;
   error?: string;
   gas: number;
@@ -19,33 +25,23 @@ export interface StructLog {
   stack: string[];
 }
 
-export interface ScopeContext {
+interface ScopeContext {
   op: string;
   contract: string;
   depth: number;
 }
 
-export function parseAddress(str: string) {
-  return hexZeroPad(hexStripZeros(hexPrefix(str)), 20);
-}
+const parseAddress = (s: string) => hexZeroPad(hexStripZeros(hexPrefix(s)), 20);
 
-export function hexPrefix(str: string) {
-  return !str.startsWith("0x") ? "0x" + str : str;
-}
+const hexPrefix = (s: string) => (!s.startsWith("0x") ? "0x" + s : s);
 
-export function parseUint(str: string) {
-  return BigNumber.from(hexPrefix(str));
-}
+const parseUint = (s: string) => bn(hexPrefix(s));
 
-export function parseBytes32(str: string) {
-  return hexZeroPad(hexStripZeros(hexPrefix(str)), 32);
-}
+const parseBytes32 = (s: string) => hexZeroPad(hexStripZeros(hexPrefix(s)), 32);
 
-export function parseMemory(strArr: string[]) {
-  return arrayify(hexPrefix(strArr.join("")));
-}
+const parseMemory = (sArray: string[]) => arrayify(hexPrefix(sArray.join("")));
 
-export function parseLogsFromTrace(to: string, trace: LoggerTrace) {
+export const parseLogsFromTrace = (to: string, trace: LoggerTrace) => {
   const topScopeContext = {
     op: "CALL",
     contract: to.toLowerCase(),
@@ -56,9 +52,10 @@ export function parseLogsFromTrace(to: string, trace: LoggerTrace) {
 
   const { structLogs } = trace;
 
-  for (let index = 0; index < structLogs.length; index++) {
-    const step = structLogs[index];
+  for (let i = 0; i < structLogs.length; i++) {
+    const step = structLogs[i];
     const { stack: stackData, op, depth } = step;
+
     const stackSize = stackData.length;
     if (["CALL", "STATICCALL", "DELEGATECALL"].includes(op)) {
       const to = parseAddress(stackData[stackSize - 2]);
@@ -69,32 +66,37 @@ export function parseLogsFromTrace(to: string, trace: LoggerTrace) {
       });
     }
 
-    if (!op.startsWith("LOG")) continue;
+    if (!op.startsWith("LOG")) {
+      continue;
+    }
 
     // Find parent CALL context
     let closestContext: ScopeContext | null = null;
-    for (let i = scopeContexts.length - 1; i >= 0; i--) {
-      const context = scopeContexts[i];
+    for (let j = scopeContexts.length - 1; j >= 0; j--) {
+      const context = scopeContexts[j];
       for (let parentDepth = depth - 1; parentDepth >= 0; parentDepth--) {
         if (context.depth === parentDepth && context.op === "CALL") {
           closestContext = context;
           break;
         }
       }
+
       if (closestContext) {
         break;
       }
     }
 
-    // Pase LOG
+    // Parse LOG opcodes
     const topicSize = parseInt(step.op.slice(3));
     const mStart = parseUint(stackData[stackSize - 1]).toNumber();
     const mSize = parseUint(stackData[stackSize - 2]).toNumber();
+
     const topics: string[] = [];
-    for (let index = 0; index < topicSize; index++) {
-      const topic = parseBytes32(stackData[stackSize - 2 - (index + 1)]);
+    for (let j = 0; j < topicSize; j++) {
+      const topic = parseBytes32(stackData[stackSize - 2 - (j + 1)]);
       topics.push(topic);
     }
+
     let data = "0x";
     if (step.memory) {
       const memory = parseMemory(step.memory);
@@ -110,4 +112,4 @@ export function parseLogsFromTrace(to: string, trace: LoggerTrace) {
   }
 
   return logs;
-}
+};
