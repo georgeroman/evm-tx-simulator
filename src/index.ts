@@ -3,6 +3,7 @@ import { JsonRpcProvider } from "@ethersproject/providers";
 import axios from "axios";
 
 import { getHandlers } from "./handlers";
+import { parseLogsFromTrace } from "./opcode";
 import { hex } from "./utils";
 
 import type {
@@ -133,7 +134,7 @@ export const getCallTraceLogs = async (
   call: Call,
   provider: JsonRpcProvider,
   options?: {
-    method: "withLog" | "customTrace";
+    method: "withLog" | "customTrace" | "opcodeTrace";
   }
 ): Promise<Log[]> => {
   const method = options?.method ?? "customTrace";
@@ -190,9 +191,21 @@ export const getCallTraceLogs = async (
     },
     "latest",
     {
-      tracer: method === "withLog" ? "callTracer" : customTrace,
-      tracerConfig: method === "withLog" ? { withLog: true } : undefined,
-      enableMemory: method === "customTrace" ? true : undefined,
+      tracer:
+        method === "opcodeTrace"
+          ? undefined
+          : method === "withLog"
+          ? "callTracer"
+          : customTrace,
+      tracerConfig:
+        method === "opcodeTrace"
+          ? undefined
+          : method === "withLog"
+          ? { withLog: true }
+          : undefined,
+      enableMemory: ["customTrace", "opcodeTrace"].includes(method)
+        ? true
+        : undefined,
       enableReturnData: method === "customTrace" ? true : undefined,
       disableStorage: method === "customTrace" ? true : undefined,
       stateOverrides:
@@ -211,7 +224,9 @@ export const getCallTraceLogs = async (
     },
   ]);
 
-  if (method === "withLog") {
+  if (method === "opcodeTrace") {
+    return parseLogsFromTrace(call.to, trace);
+  } else if (method === "withLog") {
     const typedTrace = trace as CallTrace;
 
     const getLogs = (call: CallTrace): Log[] => {
