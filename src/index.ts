@@ -21,7 +21,8 @@ type Call = {
   data: string;
   value: BigNumberish;
   gas: BigNumberish;
-  gasPrice: BigNumberish;
+  maxFeePerGas: BigNumberish;
+  maxPriorityFeePerGas: BigNumberish;
   balanceOverrides?: {
     [address: string]: BigNumberish;
   };
@@ -44,7 +45,8 @@ export const getCallResult = async (
       ...call,
       value: hex(call.value),
       gas: hex(call.gas),
-      gasPrice: hex(call.gasPrice),
+      maxFeePerGas: hex(call.maxFeePerGas),
+      maxPriorityFeePerGas: hex(call.maxPriorityFeePerGas),
     },
     "latest",
     call.balanceOverrides &&
@@ -70,7 +72,8 @@ export const getCallTrace = async (
       ...call,
       value: hex(call.value),
       gas: hex(call.gas),
-      gasPrice: hex(call.gasPrice),
+      maxFeePerGas: hex(call.maxFeePerGas),
+      maxPriorityFeePerGas: hex(call.maxPriorityFeePerGas),
     },
     "latest",
     {
@@ -119,7 +122,8 @@ export const getCallTraces = async (
           ...call,
           value: hex(call.value),
           gas: hex(call.gas),
-          gasPrice: hex(call.gasPrice),
+          maxFeePerGas: hex(call.maxFeePerGas),
+          maxPriorityFeePerGas: hex(call.maxPriorityFeePerGas),
         },
         ["trace"],
       ]),
@@ -187,7 +191,8 @@ export const getCallTraceLogs = async (
       ...call,
       value: hex(call.value),
       gas: hex(call.gas),
-      gasPrice: hex(call.gasPrice),
+      maxFeePerGas: hex(call.maxFeePerGas),
+      maxPriorityFeePerGas: hex(call.maxPriorityFeePerGas),
     },
     "latest",
     {
