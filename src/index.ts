@@ -352,6 +352,41 @@ export const searchForCall = (
   }
 };
 
+export const searchForCalls = (
+  trace: CallTrace,
+  options: { to?: string; type?: CallType; sigHashes?: string[] }
+): CallTrace[] => {
+  let match = true;
+  if (options.to && trace.to !== options.to) {
+    match = false;
+  }
+  if (options.type && trace.type !== options.type) {
+    match = false;
+  }
+  if (
+    options.sigHashes &&
+    !options.sigHashes.includes(trace.input.slice(0, 10))
+  ) {
+    match = false;
+  }
+  if (trace.error) {
+    match = false;
+  }
+
+  const results: CallTrace[] = [];
+  if (match) {
+    results.push(trace);
+  }
+
+  if (!trace.error) {
+    for (const call of trace.calls ?? []) {
+      results.push(...searchForCalls(call, options));
+    }
+  }
+
+  return results;
+};
+
 // Internal methods
 
 const internalParseCallTrace = (
