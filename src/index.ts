@@ -271,26 +271,49 @@ export const getTxTraces = async (
   txs: Tx[],
   provider: JsonRpcProvider
 ): Promise<{ [txHash: string]: CallTrace }> => {
-  const results = await axios
-    .post(
-      provider.connection.url,
-      txs.map((tx, i) => ({
-        method: "debug_traceTransaction",
-        params: [tx.hash, { tracer: "callTracer" }],
-        jsonrpc: "2.0",
-        id: i,
-      })),
-      {
-        headers: {
-          "Content-Type": "application/json",
+  if (txs.length === 1) {
+    const { result } = await axios
+      .post(
+        provider.connection.url,
+        {
+          method: "debug_traceTransaction",
+          params: [txs[0].hash, { tracer: "callTracer" }],
+          jsonrpc: "2.0",
+          id: 1,
         },
-      }
-    )
-    .then((response) => response.data as { id: number; result: CallTrace }[]);
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      )
+      .then((response) => response.data as { result: CallTrace });
 
-  return Object.fromEntries(
-    results.map(({ id, result }) => [txs[id].hash, result])
-  );
+    return {
+      [txs[0].hash]: result,
+    };
+  } else {
+    const results = await axios
+      .post(
+        provider.connection.url,
+        txs.map((tx, i) => ({
+          method: "debug_traceTransaction",
+          params: [tx.hash, { tracer: "callTracer" }],
+          jsonrpc: "2.0",
+          id: i,
+        })),
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      )
+      .then((response) => response.data as { id: number; result: CallTrace }[]);
+
+    return Object.fromEntries(
+      results.map(({ id, result }) => [txs[id].hash, result])
+    );
+  }
 };
 
 export const getStateChange = (trace: CallTrace): StateChange => {
