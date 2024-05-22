@@ -99,7 +99,7 @@ export const getCallTrace = async (
     throw new Error("execution-reverted");
   }
 
-  return trace;
+  return normalizeTrace(trace);
 };
 
 export const getCallTraces = async (
@@ -131,7 +131,9 @@ export const getCallTraces = async (
     ]
   );
 
-  return results.map((r) => internalMapToGethTraceFormat(r.trace));
+  return results.map((r) =>
+    normalizeTrace(internalMapToGethTraceFormat(r.trace))
+  );
 };
 
 export const getCallTraceLogs = async (
@@ -290,7 +292,7 @@ export const getTxTraces = async (
       .then((response) => response.data as { result: CallTrace });
 
     return {
-      [txs[0].hash]: result,
+      [txs[0].hash]: normalizeTrace(result),
     };
   } else {
     const results = await axios
@@ -311,7 +313,7 @@ export const getTxTraces = async (
       .then((response) => response.data as { id: number; result: CallTrace }[]);
 
     return Object.fromEntries(
-      results.map(({ id, result }) => [txs[id].hash, result])
+      results.map(({ id, result }) => [txs[id].hash, normalizeTrace(result)])
     );
   }
 };
@@ -412,20 +414,28 @@ export const searchForCalls = (
 
 // Internal methods
 
+const normalizeTrace = (trace: CallTrace) => {
+  trace.type = trace.type.toLowerCase() as CallType;
+  for (const call of trace.calls ?? []) {
+    normalizeTrace(call);
+  }
+  return trace;
+};
+
 const internalParseCallTrace = (
   state: StateChange,
   payments: Payment[],
   trace: CallTrace
 ) => {
   if (!trace.error) {
-    if (trace.type === "CALL") {
+    if (trace.type === "call") {
       const handlers = getHandlers(trace);
       for (const { handle } of handlers) {
         handle(state, payments, trace);
       }
     }
 
-    if (trace.type === "CALL" || trace.type === "DELEGATECALL") {
+    if (trace.type === "call" || trace.type === "delegatecall") {
       for (const call of trace.calls ?? []) {
         internalParseCallTrace(state, payments, call);
       }
@@ -437,7 +447,7 @@ const internalMapToGethTraceFormat = (
   traces: CallTraceOpenEthereum[]
 ): CallTrace => {
   const initCallTrace = (trace: CallTraceOpenEthereum): CallTrace => ({
-    type: trace.action.callType.toUpperCase() as CallType,
+    type: trace.action.callType.toLowerCase() as CallType,
     from: trace.action.from,
     to: trace.action.to,
     input: trace.action.input,

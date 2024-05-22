@@ -1,4 +1,4 @@
-export type CallType = "CALL" | "STATICCALL" | "DELEGATECALL";
+export type CallType = "call" | "staticcall" | "delegatecall";
 
 export type Log = {
   address: string;
