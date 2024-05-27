@@ -351,6 +351,7 @@ export const searchForCall = (
   }
   if (
     options.sigHashes &&
+    trace.input &&
     !options.sigHashes.includes(trace.input.slice(0, 10))
   ) {
     match = false;
@@ -390,6 +391,7 @@ export const searchForCalls = (
   }
   if (
     options.sigHashes &&
+    trace.input &&
     !options.sigHashes.includes(trace.input.slice(0, 10))
   ) {
     match = false;

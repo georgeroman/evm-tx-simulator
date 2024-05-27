@@ -28,6 +28,6 @@ export const getHandlers = (trace: CallTrace): CallHandler[] => {
 
   return [
     ...genericHandlers,
-    ...(restrictedHandlers[getSelector(trace.input)] ?? []),
+    ...(trace.input ? restrictedHandlers[getSelector(trace.input)] ?? [] : []),
   ];
 };

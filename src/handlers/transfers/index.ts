@@ -89,7 +89,7 @@ export const handlers: CallHandler[] = [
   {
     selector: iface.getSighash("transfer"),
     handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
-      const args = iface.decodeFunctionData("transfer", trace.input);
+      const args = iface.decodeFunctionData("transfer", trace.input!);
       const token = `erc20:${trace.to}`;
 
       adjustBalance(state, {
@@ -119,7 +119,7 @@ export const handlers: CallHandler[] = [
       // is by checking the return value (which is a boolean value
       // for ERC20 and is missing for ERC721)
       if (trace.output && trace.output !== "0x") {
-        const args = iface.decodeFunctionData("transferFrom", trace.input);
+        const args = iface.decodeFunctionData("transferFrom", trace.input!);
         const token = `erc20:${trace.to}`;
 
         adjustBalance(state, {
@@ -150,7 +150,7 @@ export const handlers: CallHandler[] = [
       // is by checking the return value (which is a boolean value
       // for ERC20 and is missing for ERC721)
       if (!trace.output || trace.output === "0x") {
-        const args = iface.decodeFunctionData("transferFrom", trace.input);
+        const args = iface.decodeFunctionData("transferFrom", trace.input!);
         const token = `erc721:${trace.to}:${args.valueOrTokenId.toString()}`;
 
         adjustBalance(state, {
@@ -179,7 +179,7 @@ export const handlers: CallHandler[] = [
     handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       const args = iface.decodeFunctionData(
         "safeTransferFrom(address,address,uint256)",
-        trace.input
+        trace.input!
       );
       const token = `erc721:${trace.to}:${args.tokenId.toString()}`;
 
@@ -209,7 +209,7 @@ export const handlers: CallHandler[] = [
     handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       const args = iface.decodeFunctionData(
         "safeTransferFrom(address,address,uint256,bytes)",
-        trace.input
+        trace.input!
       );
       const token = `erc721:${trace.to}:${args.tokenId.toString()}`;
 
@@ -240,7 +240,7 @@ export const handlers: CallHandler[] = [
     handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       const args = iface.decodeFunctionData(
         "safeTransferFrom(address,address,uint256,uint256,bytes)",
-        trace.input
+        trace.input!
       );
       const token = `erc1155:${trace.to}:${args.id.toString()}`;
 
@@ -268,7 +268,7 @@ export const handlers: CallHandler[] = [
     handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       const args = iface.decodeFunctionData(
         "safeBatchTransferFrom",
-        trace.input
+        trace.input!
       );
 
       for (let i = 0; i < args.id.length; i++) {
