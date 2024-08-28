@@ -9,6 +9,7 @@ import type { CallHandler, CallTrace, Payment, StateChange } from "../../types";
 const iface = new Interface([
   // ERC20
   "function transfer(address to, uint256 value)",
+  "function transferWithAuthorization(address from, address to, uint256 value, uint256 validAfter, uint256 validBefore, bytes32 nonce, bytes signature)",
   // ERC20 / ERC721
   "function transferFrom(address from, address to, uint256 valueOrTokenId)",
   // ERC721
@@ -105,6 +106,35 @@ export const handlers: CallHandler[] = [
 
       payments.push({
         from: trace.from,
+        to: args.to,
+        token,
+        amount: args.value.toString(),
+      });
+    },
+  },
+  // ERC20 "transferWithAuthorization"
+  {
+    selector: iface.getSighash("transferWithAuthorization"),
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
+      const args = iface.decodeFunctionData(
+        "transferWithAuthorization",
+        trace.input
+      );
+      const token = `erc20:${trace.to}`;
+
+      adjustBalance(state, {
+        token,
+        address: args.from,
+        adjustment: args.value.mul(-1),
+      });
+      adjustBalance(state, {
+        token,
+        address: args.to,
+        adjustment: args.value,
+      });
+
+      payments.push({
+        from: args.from,
         to: args.to,
         token,
         amount: args.value.toString(),
