@@ -7,9 +7,10 @@ import { bn } from "../../utils";
 import type { CallHandler, CallTrace, Payment, StateChange } from "../../types";
 
 const iface = new Interface([
+  // Standard methods
+
   // ERC20
   "function transfer(address to, uint256 value)",
-  "function transferWithAuthorization(address from, address to, uint256 value, uint256 validAfter, uint256 validBefore, bytes32 nonce, bytes signature)",
   // ERC20 / ERC721
   "function transferFrom(address from, address to, uint256 valueOrTokenId)",
   // ERC721
@@ -18,6 +19,19 @@ const iface = new Interface([
   // ERC1155
   "function safeTransferFrom(address from, address to, uint256 id, uint256 value, bytes calldata data)",
   "function safeBatchTransferFrom(address from, address to, uint256[] calldata id, uint256[] value, bytes calldata data)",
+
+  // Non-standard methods
+
+  // USDC transfer with authorization
+  "function transferWithAuthorization(address from, address to, uint256 value, uint256 validAfter, uint256 validBefore, bytes32 nonce, bytes signature)",
+  // WETH / BETH deposits
+  "function deposit()",
+  // BETH deposit to
+  "function deposit(address to)",
+  // WETH / BETH withdraw
+  "function withdraw(uint256 value)",
+  // BETH withdraw from
+  "function withdrawFrom(address from, address to, uint256 value)",
 ]);
 
 const adjustBalance = (
@@ -106,35 +120,6 @@ export const handlers: CallHandler[] = [
 
       payments.push({
         from: trace.from,
-        to: args.to,
-        token,
-        amount: args.value.toString(),
-      });
-    },
-  },
-  // ERC20 "transferWithAuthorization"
-  {
-    selector: iface.getSighash("transferWithAuthorization"),
-    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
-      const args = iface.decodeFunctionData(
-        "transferWithAuthorization",
-        trace.input
-      );
-      const token = `erc20:${trace.to}`;
-
-      adjustBalance(state, {
-        token,
-        address: args.from,
-        adjustment: args.value.mul(-1),
-      });
-      adjustBalance(state, {
-        token,
-        address: args.to,
-        adjustment: args.value,
-      });
-
-      payments.push({
-        from: args.from,
         to: args.to,
         token,
         amount: args.value.toString(),
@@ -321,6 +306,122 @@ export const handlers: CallHandler[] = [
           amount: args.value[i].toString(),
         });
       }
+    },
+  },
+  // ERC20 "transferWithAuthorization"
+  {
+    selector: iface.getSighash("transferWithAuthorization"),
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
+      const args = iface.decodeFunctionData(
+        "transferWithAuthorization",
+        trace.input
+      );
+      const token = `erc20:${trace.to}`;
+
+      adjustBalance(state, {
+        token,
+        address: args.from,
+        adjustment: args.value.mul(-1),
+      });
+      adjustBalance(state, {
+        token,
+        address: args.to,
+        adjustment: args.value,
+      });
+
+      payments.push({
+        from: args.from,
+        to: args.to,
+        token,
+        amount: args.value.toString(),
+      });
+    },
+  },
+  // ERC20 "deposit"
+  {
+    selector: iface.getSighash("deposit()"),
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
+      const value = bn(trace.value ?? 0);
+      if (value.gt(0)) {
+        const token = `erc20:${trace.to}`;
+
+        adjustBalance(state, {
+          token,
+          address: trace.from,
+          adjustment: value,
+        });
+
+        payments.push({
+          from: AddressZero,
+          to: trace.from,
+          token,
+          amount: value.toString(),
+        });
+      }
+    },
+  },
+  {
+    selector: iface.getSighash("deposit(address)"),
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
+      const value = bn(trace.value ?? 0);
+      if (value.gt(0)) {
+        const args = iface.decodeFunctionData("deposit(address)", trace.input);
+        const token = `erc20:${trace.to}`;
+
+        adjustBalance(state, {
+          token,
+          address: args.to,
+          adjustment: value,
+        });
+
+        payments.push({
+          from: AddressZero,
+          to: args.to,
+          token,
+          amount: value.toString(),
+        });
+      }
+    },
+  },
+  // ERC20 "withdraw"
+  {
+    selector: iface.getSighash("withdraw"),
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
+      const args = iface.decodeFunctionData("withdraw", trace.input);
+      const token = `erc20:${trace.to}`;
+
+      adjustBalance(state, {
+        token,
+        address: trace.from,
+        adjustment: args.value.mul(-1),
+      });
+
+      payments.push({
+        from: trace.from,
+        to: AddressZero,
+        token,
+        amount: args.value.toString(),
+      });
+    },
+  },
+  {
+    selector: iface.getSighash("withdrawFrom"),
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
+      const args = iface.decodeFunctionData("withdrawFrom", trace.input);
+      const token = `erc20:${trace.to}`;
+
+      adjustBalance(state, {
+        token,
+        address: args.from,
+        adjustment: args.value.mul(-1),
+      });
+
+      payments.push({
+        from: args.from,
+        to: AddressZero,
+        token,
+        amount: args.value.toString(),
+      });
     },
   },
 ];
