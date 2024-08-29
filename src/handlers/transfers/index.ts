@@ -22,6 +22,10 @@ const iface = new Interface([
 
   // Non-standard methods
 
+  // USDC mint
+  "function mint(address to, uint256 value)",
+  // USDC burn
+  "function burn(uint256 value)",
   // USDC transfer with authorization
   "function transferWithAuthorization(address from, address to, uint256 value, uint256 validAfter, uint256 validBefore, bytes32 nonce, bytes signature)",
   // WETH / BETH deposits
@@ -306,6 +310,58 @@ export const handlers: CallHandler[] = [
           amount: args.value[i].toString(),
         });
       }
+    },
+  },
+  // ERC20 "mint"
+  {
+    selector: iface.getSighash("mint"),
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
+      const args = iface.decodeFunctionData("mint", trace.input);
+      const token = `erc20:${trace.to}`;
+
+      adjustBalance(state, {
+        token,
+        address: AddressZero,
+        adjustment: args.value.mul(-1),
+      });
+      adjustBalance(state, {
+        token,
+        address: args.to,
+        adjustment: args.value,
+      });
+
+      payments.push({
+        from: AddressZero,
+        to: args.to,
+        token,
+        amount: args.value.toString(),
+      });
+    },
+  },
+  // ERC20 "burn"
+  {
+    selector: iface.getSighash("burn"),
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
+      const args = iface.decodeFunctionData("burn", trace.input);
+      const token = `erc20:${trace.to}`;
+
+      adjustBalance(state, {
+        token,
+        address: trace.from,
+        adjustment: args.value.mul(-1),
+      });
+      adjustBalance(state, {
+        token,
+        address: AddressZero,
+        adjustment: args.value,
+      });
+
+      payments.push({
+        from: trace.from,
+        to: AddressZero,
+        token,
+        amount: args.value.toString(),
+      });
     },
   },
   // ERC20 "transferWithAuthorization"
