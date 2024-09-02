@@ -32,8 +32,12 @@ const iface = new Interface([
   "function deposit()",
   // BETH deposit to
   "function deposit(address to)",
+  // WETH deposit to
+  "function depositTo(address to)",
   // WETH / BETH withdraw
   "function withdraw(uint256 value)",
+  // WETH withdraw to
+  "function withdrawTo(address to, uint256 value)",
   // BETH withdraw from
   "function withdrawFrom(address from, address to, uint256 value)",
 ]);
@@ -439,11 +443,57 @@ export const handlers: CallHandler[] = [
       }
     },
   },
+  {
+    selector: iface.getSighash("depositTo(address)"),
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
+      const value = bn(trace.value ?? 0);
+      if (value.gt(0)) {
+        const args = iface.decodeFunctionData(
+          "depositTo(address)",
+          trace.input
+        );
+        const token = `erc20:${trace.to}`;
+
+        adjustBalance(state, {
+          token,
+          address: args.to,
+          adjustment: value,
+        });
+
+        payments.push({
+          from: AddressZero,
+          to: args.to,
+          token,
+          amount: value.toString(),
+        });
+      }
+    },
+  },
   // ERC20 "withdraw"
   {
     selector: iface.getSighash("withdraw"),
     handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       const args = iface.decodeFunctionData("withdraw", trace.input);
+      const token = `erc20:${trace.to}`;
+
+      adjustBalance(state, {
+        token,
+        address: trace.from,
+        adjustment: args.value.mul(-1),
+      });
+
+      payments.push({
+        from: trace.from,
+        to: AddressZero,
+        token,
+        amount: args.value.toString(),
+      });
+    },
+  },
+  {
+    selector: iface.getSighash("withdrawTo"),
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
+      const args = iface.decodeFunctionData("withdrawTo", trace.input);
       const token = `erc20:${trace.to}`;
 
       adjustBalance(state, {
