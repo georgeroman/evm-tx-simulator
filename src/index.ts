@@ -451,8 +451,10 @@ const internalMapToGethTraceFormat = (
     from: trace.action.from,
     to: trace.action.to,
     input: trace.action.input,
-    output: trace.result?.output || "0x",
+    output: trace.result.output || "0x",
     value: trace.action.value,
+    gas: trace.action.gas,
+    gasUsed: trace.result.gasUsed || "0x",
     error: trace.error,
     calls: [],
   });
