@@ -12,6 +12,8 @@ export interface CallTrace {
   to: string;
   input: string;
   output: string;
+  gas: string;
+  gasUsed: string;
   value?: string;
   error?: string;
   calls?: CallTrace[];
