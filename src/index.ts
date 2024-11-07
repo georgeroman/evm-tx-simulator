@@ -1,5 +1,5 @@
 import { BigNumberish } from "@ethersproject/bignumber";
-import { JsonRpcProvider } from "@ethersproject/providers";
+import { BlockTag, JsonRpcProvider } from "@ethersproject/providers";
 import axios from "axios";
 
 import { getHandlers } from "./handlers";
@@ -34,7 +34,8 @@ type Call = {
 
 export const getCallResult = async (
   call: Call,
-  provider: JsonRpcProvider
+  provider: JsonRpcProvider,
+  block?: BlockTag
 ): Promise<any> => {
   if (call.blockOverrides) {
     throw new Error("Block overrides not supported");
@@ -48,7 +49,7 @@ export const getCallResult = async (
       maxFeePerGas: hex(call.maxFeePerGas),
       maxPriorityFeePerGas: hex(call.maxPriorityFeePerGas),
     },
-    "latest",
+    block ? (typeof block === "number" ? hex(block) : block) : "latest",
     call.balanceOverrides &&
       Object.fromEntries(
         Object.entries(call.balanceOverrides).map(([address, balance]) => [
@@ -63,6 +64,7 @@ export const getCallTrace = async (
   call: Call,
   provider: JsonRpcProvider,
   options?: {
+    block?: BlockTag;
     skipReverts?: boolean;
     includeLogs?: boolean;
   }
@@ -75,7 +77,11 @@ export const getCallTrace = async (
       maxFeePerGas: hex(call.maxFeePerGas),
       maxPriorityFeePerGas: hex(call.maxPriorityFeePerGas),
     },
-    "latest",
+    options?.block
+      ? typeof options.block === "number"
+        ? hex(options.block)
+        : options.block
+      : "latest",
     {
       tracer: "callTracer",
       tracerConfig: options?.includeLogs ? { withLog: true } : undefined,
@@ -104,7 +110,8 @@ export const getCallTrace = async (
 
 export const getCallTraces = async (
   calls: Call[],
-  provider: JsonRpcProvider
+  provider: JsonRpcProvider,
+  block?: BlockTag
 ) => {
   if (calls.some((call) => call.blockOverrides)) {
     throw new Error("Block overrides not supported");
@@ -127,7 +134,8 @@ export const getCallTraces = async (
         },
         ["trace"],
       ]),
-      "latest",
+      block ? (typeof block === "number" ? hex(block) : block) : "latest",
+      ,
     ]
   );
 
@@ -140,7 +148,8 @@ export const getCallTraceLogs = async (
   call: Call,
   provider: JsonRpcProvider,
   options?: {
-    method: "withLog" | "customTrace" | "opcodeTrace";
+    block?: BlockTag;
+    method?: "withLog" | "customTrace" | "opcodeTrace";
   }
 ): Promise<Log[]> => {
   const method = options?.method ?? "customTrace";
@@ -196,7 +205,11 @@ export const getCallTraceLogs = async (
       maxFeePerGas: hex(call.maxFeePerGas),
       maxPriorityFeePerGas: hex(call.maxPriorityFeePerGas),
     },
-    "latest",
+    options?.block
+      ? typeof options.block === "number"
+        ? hex(options.block)
+        : options.block
+      : "latest",
     {
       tracer:
         method === "opcodeTrace"
