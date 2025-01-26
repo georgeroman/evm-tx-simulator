@@ -435,6 +435,15 @@ const normalizeTrace = (trace: CallTrace) => {
   return trace;
 };
 
+const isPrecompile = (address: string | null) => {
+  // Covers zkSync precompiles which have the format `0x0000000000000000000000000000000000008XXX`
+  if (address && address.startsWith("0x000000000000000000000000000000000000")) {
+    return true;
+  }
+
+  return false;
+};
+
 const internalParseCallTrace = (
   state: StateChange,
   payments: Payment[],
@@ -450,7 +459,19 @@ const internalParseCallTrace = (
 
     if (trace.type === "call" || trace.type === "delegatecall") {
       for (const call of trace.calls ?? []) {
-        internalParseCallTrace(state, payments, call);
+        // We have this check to avoid weird trace results from zkSync-based chains
+        // where a call can be duplicated within its own internal calls
+        const skipCall =
+          !isPrecompile(trace.from) &&
+          !isPrecompile(trace.to) &&
+          !isPrecompile(call.from) &&
+          !isPrecompile(call.to)
+            ? call.from === trace.from && call.to === trace.to
+            : false;
+
+        if (!skipCall) {
+          internalParseCallTrace(state, payments, call);
+        }
       }
     }
   }
