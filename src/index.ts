@@ -447,10 +447,11 @@ const isPrecompile = (address: string | null) => {
 const internalParseCallTrace = (
   state: StateChange,
   payments: Payment[],
-  trace: CallTrace
+  trace: CallTrace,
+  skipHandler?: boolean
 ) => {
   if (!trace.error) {
-    if (trace.type === "call") {
+    if (trace.type === "call" && !skipHandler) {
       const handlers = getHandlers(trace);
       for (const { handle } of handlers) {
         handle(state, payments, trace);
@@ -461,7 +462,7 @@ const internalParseCallTrace = (
       for (const call of trace.calls ?? []) {
         // We have this check to avoid weird trace results from zkSync-based chains
         // where a call can be duplicated within its own internal calls
-        const skipCall =
+        const skipHandler =
           !isPrecompile(trace.from) &&
           !isPrecompile(trace.to) &&
           !isPrecompile(call.from) &&
@@ -469,9 +470,7 @@ const internalParseCallTrace = (
             ? call.from === trace.from && call.to === trace.to
             : false;
 
-        if (!skipCall) {
-          internalParseCallTrace(state, payments, call);
-        }
+        internalParseCallTrace(state, payments, call, skipHandler);
       }
     }
   }
