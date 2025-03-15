@@ -282,6 +282,35 @@ type Tx = {
   hash: string;
 };
 
+export const getBlockTraces = async (
+  block: number,
+  provider: JsonRpcProvider
+): Promise<{ [txHash: string]: CallTrace }> => {
+  const results = await axios
+    .post(
+      provider.connection.url,
+      {
+        method: "debug_traceBlockByNumber",
+        params: [hex(block), { tracer: "callTracer" }],
+        jsonrpc: "2.0",
+        id: 1,
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    )
+    .then(
+      (response) =>
+        response.data.result as { txHash: string; result: CallTrace }[]
+    );
+
+  return Object.fromEntries(
+    results.map(({ txHash, result }) => [txHash, normalizeTrace(result)])
+  );
+};
+
 export const getTxTraces = async (
   txs: Tx[],
   provider: JsonRpcProvider
