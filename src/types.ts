@@ -16,6 +16,8 @@ export interface CallTrace {
   gasUsed: string;
   value?: string;
   error?: string;
+  // zkSync-based chains use `revertReason` instead of `error`
+  revertReason?: string;
   calls?: CallTrace[];
   logs?: Log[];
 }

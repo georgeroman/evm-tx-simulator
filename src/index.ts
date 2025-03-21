@@ -457,7 +457,14 @@ export const searchForCalls = (
 // Internal methods
 
 const normalizeTrace = (trace: CallTrace) => {
+  // Lowercase the `type`
   trace.type = trace.type.toLowerCase() as CallType;
+
+  // Normalize `revertReason` to `error`
+  if (trace.revertReason && !trace.error) {
+    trace.error = trace.revertReason;
+  }
+
   for (const call of trace.calls ?? []) {
     normalizeTrace(call);
   }
