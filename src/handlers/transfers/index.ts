@@ -5,6 +5,7 @@ import { AddressZero } from "@ethersproject/constants";
 import { bn } from "../../utils";
 
 import type { CallHandler, CallTrace, Payment, StateChange } from "../../types";
+import { knownNonStandardERC20 } from "../../constants";
 
 const iface = new Interface([
   // Standard methods
@@ -141,7 +142,10 @@ export const handlers: CallHandler[] = [
       // The way to differentiate ERC20 from ERC721 "transferFrom"
       // is by checking the return value (which is a boolean value
       // for ERC20 and is missing for ERC721)
-      if (trace.output && trace.output !== "0x") {
+      if (
+        (trace.output && trace.output !== "0x") ||
+        knownNonStandardERC20.includes(trace.to)
+      ) {
         const args = iface.decodeFunctionData("transferFrom", trace.input);
         const token = `erc20:${trace.to}`;
 
@@ -172,7 +176,10 @@ export const handlers: CallHandler[] = [
       // The way to differentiate ERC20 from ERC721 "transferFrom"
       // is by checking the return value (which is a boolean value
       // for ERC20 and is missing for ERC721)
-      if (!trace.output || trace.output === "0x") {
+      if (
+        (!trace.output || trace.output !== "0x") &&
+        !knownNonStandardERC20.includes(trace.to)
+      ) {
         const args = iface.decodeFunctionData("transferFrom", trace.input);
         const token = `erc721:${trace.to}:${args.valueOrTokenId.toString()}`;
 
