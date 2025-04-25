@@ -135,44 +135,72 @@ export const handlers: CallHandler[] = [
       });
     },
   },
-  // Unified ERC20/ERC721 transferFrom with heuristic
+  // ERC20 "transferFrom"
   {
     selector: iface.getSighash("transferFrom"),
     handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
-      const args = iface.decodeFunctionData("transferFrom", trace.input);
+      // The way to differentiate ERC20 from ERC721 "transferFrom"
+      // is by checking the return value (which is a boolean value
+      // for ERC20 and is missing for ERC721)
+      if (
+        (trace.output && trace.output !== "0x") ||
+        knownNonStandardERC20.includes(trace.to)
+      ) {
+        const args = iface.decodeFunctionData("transferFrom", trace.input);
+        const token = `erc20:${trace.to}`;
 
-      let isErc721 = false;
+        adjustBalance(state, {
+          token,
+          address: args.from,
+          adjustment: args.valueOrTokenId.mul(-1),
+        });
+        adjustBalance(state, {
+          token,
+          address: args.to,
+          adjustment: args.valueOrTokenId,
+        });
 
-      if (!trace.output || trace.output === "0x") {
-        isErc721 = true;
-        const toAddress = trace.to.toLowerCase();
-        if (knownNonStandardERC20.includes(toAddress)) {
-          // All these tokens are non-standard but are ERC20
-          isErc721 = false;
-        }
+        payments.push({
+          from: args.from,
+          to: args.to,
+          token,
+          amount: args.valueOrTokenId.toString(),
+        });
       }
+    },
+  },
+  // ERC721 "transferFrom"
+  {
+    selector: iface.getSighash("transferFrom"),
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
+      // The way to differentiate ERC20 from ERC721 "transferFrom"
+      // is by checking the return value (which is a boolean value
+      // for ERC20 and is missing for ERC721)
+      if (
+        (!trace.output || trace.output !== "0x") &&
+        !knownNonStandardERC20.includes(trace.to)
+      ) {
+        const args = iface.decodeFunctionData("transferFrom", trace.input);
+        const token = `erc721:${trace.to}:${args.valueOrTokenId.toString()}`;
 
-      const token = isErc721
-        ? `erc721:${trace.to}:${args.valueOrTokenId.toString()}`
-        : `erc20:${trace.to}`;
+        adjustBalance(state, {
+          token,
+          address: args.from,
+          adjustment: -1,
+        });
+        adjustBalance(state, {
+          token,
+          address: args.to,
+          adjustment: 1,
+        });
 
-      adjustBalance(state, {
-        token,
-        address: args.from,
-        adjustment: isErc721 ? -1 : args.valueOrTokenId.mul(-1),
-      });
-      adjustBalance(state, {
-        token,
-        address: args.to,
-        adjustment: isErc721 ? 1 : args.valueOrTokenId,
-      });
-
-      payments.push({
-        from: args.from,
-        to: args.to,
-        token,
-        amount: isErc721 ? "1" : args.valueOrTokenId.toString(),
-      });
+        payments.push({
+          from: args.from,
+          to: args.to,
+          token,
+          amount: "1",
+        });
+      }
     },
   },
   // ERC721 "safeTransferFrom"
