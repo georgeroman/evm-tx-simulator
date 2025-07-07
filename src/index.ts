@@ -471,7 +471,7 @@ const normalizeTrace = (trace: CallTrace) => {
   return trace;
 };
 
-const isPrecompile = (address: string | null) => {
+export const isPrecompile = (address: string | null) => {
   // Covers zkSync precompiles which have the format `0x0000000000000000000000000000000000008XXX`
   if (address && address.startsWith("0x000000000000000000000000000000000000")) {
     return true;
