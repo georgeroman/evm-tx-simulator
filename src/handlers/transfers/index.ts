@@ -6,6 +6,11 @@ import { bn } from "../../utils";
 
 import type { CallHandler, CallTrace, Payment, StateChange } from "../../types";
 import { knownNonStandardERC20 } from "../../constants";
+import { isPrecompile } from "../..";
+
+const zksyncL2EthIface = new Interface([
+  "function transfer(address token,address to,uint256 amount)",
+]);
 
 const iface = new Interface([
   // Standard methods
@@ -86,6 +91,7 @@ export const handlers: CallHandler[] = [
   {
     handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
       const value = bn(trace.value ?? 0);
+      if (value.isZero() || isPrecompile(trace.from) || isPrecompile(trace.to)) return;
       if (value.gt(0)) {
         const token = `native:${AddressZero}`;
 
@@ -534,6 +540,39 @@ export const handlers: CallHandler[] = [
         to: AddressZero,
         token,
         amount: args.value.toString(),
+      });
+    },
+  },
+  // zkSync L2EthToken: transfer(address token,address to,uint256 amount)
+  // selector 0x579952fc  (this is the REAL refund mint)
+  {
+    selector: zksyncL2EthIface.getSighash("transfer"), // 0x579952fc
+    handle: (state: StateChange, payments: Payment[], trace: CallTrace) => {
+      // must be the L2 ETH contract
+      if (
+        trace.to.toLowerCase() !== "0x000000000000000000000000000000000000800a"
+      )
+        return;
+
+      // decode (address token, address to, uint256 amount)
+      const [tokenAddress, to, amount] = zksyncL2EthIface.decodeFunctionData(
+        "transfer",
+        trace.input
+      );
+
+      // we only care about the native ETH token (0x00...)
+      if (tokenAddress.toLowerCase() !== AddressZero.toLowerCase()) return;
+
+      const token = `native:${AddressZero}`;
+
+      // credit the user 
+      adjustBalance(state, { token, address: to, adjustment: amount });
+
+      payments.push({
+        from: "0x000000000000000000000000000000000000800a", // logical source
+        to,
+        token,
+        amount: amount.toString(),
       });
     },
   },
