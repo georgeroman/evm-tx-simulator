@@ -1,3 +1,5 @@
+import { BigNumberish } from "@ethersproject/bignumber";
+
 export type CallType = "call" | "staticcall" | "delegatecall";
 
 export type Log = {
@@ -64,3 +66,30 @@ export type Payment = {
   token: string;
   amount: string;
 };
+
+export type Call = {
+  from: string;
+  to: string;
+  data: string;
+  value: BigNumberish;
+  gas: BigNumberish;
+  maxFeePerGas: BigNumberish;
+  maxPriorityFeePerGas: BigNumberish;
+  balanceOverrides?: {
+    [address: string]: BigNumberish;
+  };
+  blockOverrides?: {
+    number?: number;
+    timestamp?: number;
+  };
+  authorization_list?: AuthorizationList[] // EIP-7702 authorization_list
+};
+
+export type AuthorizationList = {
+  chainId: number;
+  nonce: number;
+  r: string;
+  s: string;
+  v: number;
+  address: string;
+}

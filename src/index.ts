@@ -1,4 +1,3 @@
-import { BigNumberish } from "@ethersproject/bignumber";
 import { BlockTag, JsonRpcProvider } from "@ethersproject/providers";
 import axios from "axios";
 
@@ -7,6 +6,7 @@ import { parseLogsFromTrace } from "./opcode";
 import { hex } from "./utils";
 
 import type {
+  Call,
   CallTrace,
   CallTraceOpenEthereum,
   CallType,
@@ -15,22 +15,6 @@ import type {
   StateChange,
 } from "./types";
 
-type Call = {
-  from: string;
-  to: string;
-  data: string;
-  value: BigNumberish;
-  gas: BigNumberish;
-  maxFeePerGas: BigNumberish;
-  maxPriorityFeePerGas: BigNumberish;
-  balanceOverrides?: {
-    [address: string]: BigNumberish;
-  };
-  blockOverrides?: {
-    number?: number;
-    timestamp?: number;
-  };
-};
 
 export const getCallResult = async (
   call: Call,
@@ -102,7 +86,7 @@ export const getCallTrace = async (
   ]);
 
   if (!options?.skipReverts && trace.error) {
-    throw new Error("execution-reverted");
+    throw new Error(`execution-reverted: ${JSON.stringify(trace.error)}`);
   }
 
   return normalizeTrace(trace);
