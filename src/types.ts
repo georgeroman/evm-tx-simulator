@@ -1,3 +1,6 @@
+import { BigNumberish } from "@ethersproject/bignumber";
+import { SignAuthorizationReturnType } from "viem";
+
 export type CallType = "call" | "staticcall" | "delegatecall";
 
 export type Log = {
@@ -63,4 +66,22 @@ export type Payment = {
   to: string;
   token: string;
   amount: string;
+};
+
+export type Call = {
+  from: string;
+  to: string;
+  data: string;
+  value: BigNumberish;
+  gas: BigNumberish;
+  maxFeePerGas: BigNumberish;
+  maxPriorityFeePerGas: BigNumberish;
+  balanceOverrides?: {
+    [address: string]: BigNumberish;
+  };
+  blockOverrides?: {
+    number?: number;
+    timestamp?: number;
+  };
+  authorizationList?: SignAuthorizationReturnType[] // EIP-7702 authorizationList
 };
