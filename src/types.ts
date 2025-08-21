@@ -83,5 +83,14 @@ export type Call = {
     number?: number;
     timestamp?: number;
   };
-  authorizationList?: SignAuthorizationReturnType[] // EIP-7702 authorizationList
+  authorization_list?: AuthorizationList[] // EIP-7702 authorization_list
 };
+
+export type AuthorizationList = {
+  chainId: number;
+  nonce: number;
+  r: string;
+  s: string;
+  v: number;
+  address: string;
+}
