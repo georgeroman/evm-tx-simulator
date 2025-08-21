@@ -86,7 +86,7 @@ export const getCallTrace = async (
   ]);
 
   if (!options?.skipReverts && trace.error) {
-    throw new Error("execution-reverted");
+    throw new Error(`execution-reverted: ${JSON.stringify(trace.error)}`);
   }
 
   return normalizeTrace(trace);
