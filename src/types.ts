@@ -1,5 +1,4 @@
 import { BigNumberish } from "@ethersproject/bignumber";
-import { SignAuthorizationReturnType } from "viem";
 
 export type CallType = "call" | "staticcall" | "delegatecall";
 
