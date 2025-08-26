@@ -72,7 +72,7 @@ export type Call = {
   to: string;
   data: string;
   value: BigNumberish;
-  gas: BigNumberish;
+  gas?: BigNumberish;
   maxFeePerGas: BigNumberish;
   maxPriorityFeePerGas: BigNumberish;
   balanceOverrides?: {
@@ -90,6 +90,7 @@ export type AuthorizationList = {
   nonce: number;
   r: string;
   s: string;
-  v: number;
+  v?: number;
+  yParity?: number;
   address: string;
 }
