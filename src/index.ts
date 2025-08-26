@@ -29,7 +29,7 @@ export const getCallResult = async (
     {
       ...call,
       value: hex(call.value),
-      gas: hex(call.gas),
+      ...(call.gas !== undefined && { gas: hex(call.gas) }),
       maxFeePerGas: hex(call.maxFeePerGas),
       maxPriorityFeePerGas: hex(call.maxPriorityFeePerGas),
     },
@@ -57,7 +57,7 @@ export const getCallTrace = async (
     {
       ...call,
       value: hex(call.value),
-      gas: hex(call.gas),
+      ...(call.gas !== undefined && { gas: hex(call.gas) }),
       maxFeePerGas: hex(call.maxFeePerGas),
       maxPriorityFeePerGas: hex(call.maxPriorityFeePerGas),
     },
@@ -112,7 +112,7 @@ export const getCallTraces = async (
         {
           ...call,
           value: hex(call.value),
-          gas: hex(call.gas),
+          ...(call.gas !== undefined && { gas: hex(call.gas) }),
           maxFeePerGas: hex(call.maxFeePerGas),
           maxPriorityFeePerGas: hex(call.maxPriorityFeePerGas),
         },
@@ -185,7 +185,7 @@ export const getCallTraceLogs = async (
     {
       ...call,
       value: hex(call.value),
-      gas: hex(call.gas),
+      ...(call.gas !== undefined && { gas: hex(call.gas) }),
       maxFeePerGas: hex(call.maxFeePerGas),
       maxPriorityFeePerGas: hex(call.maxPriorityFeePerGas),
     },
