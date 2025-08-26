@@ -82,7 +82,7 @@ export type Call = {
     number?: number;
     timestamp?: number;
   };
-  authorization_list?: AuthorizationList[] // EIP-7702 authorization_list
+  authorizationList?: AuthorizationList[] // EIP-7702 authorization_list
 };
 
 export type AuthorizationList = {
@@ -90,7 +90,6 @@ export type AuthorizationList = {
   nonce: number;
   r: string;
   s: string;
-  v?: number;
-  yParity?: number;
+  yParity: number;
   address: string;
 }
