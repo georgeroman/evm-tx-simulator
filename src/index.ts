@@ -15,7 +15,6 @@ import type {
   StateChange,
 } from "./types";
 
-
 export const getCallResult = async (
   call: Call,
   provider: JsonRpcProvider,
@@ -474,7 +473,15 @@ const internalParseCallTrace = (
     if (trace.type === "call" && !skipHandler) {
       const handlers = getHandlers(trace);
       for (const { handle } of handlers) {
-        handle(state, payments, trace);
+        try {
+          handle(state, payments, trace);
+        } catch (error: any) {
+          if (error.message?.includes("data out-of-bounds")) {
+            // We should skip this error since it's coming from selector overwrite
+          } else {
+            throw error;
+          }
+        }
       }
     }
 
