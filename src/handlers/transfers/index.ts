@@ -183,7 +183,7 @@ export const handlers: CallHandler[] = [
       // is by checking the return value (which is a boolean value
       // for ERC20 and is missing for ERC721)
       if (
-        (!trace.output || trace.output !== "0x") &&
+        (!trace.output || trace.output === "0x") &&
         !knownNonStandardERC20.includes(trace.to)
       ) {
         const args = iface.decodeFunctionData("transferFrom", trace.input);
