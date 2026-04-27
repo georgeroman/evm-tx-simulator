@@ -292,7 +292,7 @@ export const getBlockTraces = async (
           }`
         );
       }
-      return (response.data.result ?? []) as { txHash: string; result: CallTrace }[];
+      return response.data.result as { txHash: string; result: CallTrace }[];
     });
 
   return Object.fromEntries(
