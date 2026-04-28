@@ -284,10 +284,16 @@ export const getBlockTraces = async (
         },
       }
     )
-    .then(
-      (response) =>
-        response.data.result as { txHash: string; result: CallTrace }[]
-    );
+    .then((response) => {
+      if (response.data.error) {
+        throw new Error(
+          `debug_traceBlockByNumber failed: ${
+            response.data.error.message ?? JSON.stringify(response.data.error)
+          }`
+        );
+      }
+      return response.data.result as { txHash: string; result: CallTrace }[];
+    });
 
   return Object.fromEntries(
     results.map(({ txHash, result }) => [txHash, normalizeTrace(result)])
