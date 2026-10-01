@@ -1,8 +1,45 @@
 # `evm-tx-simulator`
 
-Simulate balance changes (`ETH`, `ERC20`, `ERC721` and `ERC1155`) resulted from running any potential EVM transaction.
+See how an EVM transaction changes ETH and token balances before sending it, or
+inspect the balance changes from an existing transaction. Supports native tokens,
+ERC20, ERC721, and ERC1155.
 
-Run via `npx ts-node ./src/index.ts` (see below an example output).
+There are four methods:
+
+- `getCallTrace` — simulate a transaction without submitting it.
+- `getTxTraces` — fetch traces for existing transactions.
+- `getBlockTraces` — fetch traces for every transaction in a block.
+- `getStateChange` — turn a trace into balance changes for each address.
+
+ERC20 transfers are read from events, including WETH-style deposits and
+withdrawals. Native transfers use call values and calldata; NFT transfers use
+calldata. Reverted calls don't count toward balance changes.
+
+`getStateChange` requires logs. If you already have the transaction's receipt,
+pass its logs directly. The trace methods default to `includeLogs: false`:
+
+```ts
+const traces = await getTxTraces([{ hash }], provider);
+const changes = getStateChange(traces[hash], receipt.logs);
+```
+
+Otherwise, opt into fetching logs with the trace. This requires an RPC endpoint
+that supports `callTracer` with `withLog`:
+
+```ts
+const traces = await getTxTraces([{ hash }], provider, { includeLogs: true });
+const changes = getStateChange(traces[hash]);
+```
+
+`getCallTrace` and `getBlockTraces` accept the same `includeLogs` option.
+Without either source, `getStateChange` throws. Supplied logs replace all logs
+embedded in the trace; pass `[]` only when the transaction emitted no logs.
+
+TypeScript types, including `Call` and `CallTrace`, can be imported from
+`@georgeroman/evm-tx-simulator/dist/types`.
+
+Here's an example of `getStateChange` output. Positive amounts are balance
+increases; negative amounts are decreases. Amounts use the token's smallest unit.
 
 ```json
 {

@@ -22,28 +22,13 @@ export interface CallTrace {
   revertReason?: string;
   calls?: CallTrace[];
   logs?: Log[];
-}
-
-export interface CallTraceOpenEthereum {
-  action: {
-    from: string;
-    callType: CallType;
-    input: string;
-    to: string;
-    value: string;
-    gas: string;
-  };
-  error?: string;
-  result: {
-    output: string;
-    gasUsed: string;
-  };
-  traceAddress: number[];
+  // Set by the trace helpers when fetched with includeLogs: true, even if no events were emitted.
+  logsIncluded?: boolean;
 }
 
 export type CallHandler = {
   selector?: string;
-  handle: (state: StateChange, payments: Payment[], trace: CallTrace) => void;
+  handle: (state: StateChange, trace: CallTrace, logs?: Log[]) => void;
 };
 
 // Each `token` field below has the following format:
@@ -58,13 +43,6 @@ export type StateChange = {
     // Mapping from token address to balance changes (in the context of an address state)
     tokenBalanceState: { [token: string]: string };
   };
-};
-
-export type Payment = {
-  from: string;
-  to: string;
-  token: string;
-  amount: string;
 };
 
 export type Call = {
