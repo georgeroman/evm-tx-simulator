@@ -5,7 +5,7 @@ import { getHandlers } from "./handlers";
 import { handleERC20Logs } from "./handlers/transfers/events";
 import { hex, isPrecompile } from "./utils";
 
-import type { Call, CallTrace, CallType, StateChange } from "./types";
+import type { Call, CallTrace, CallType, Log, StateChange } from "./types";
 
 export const getCallTrace = async (
   call: Call,
@@ -62,7 +62,8 @@ type Tx = {
 
 export const getBlockTraces = async (
   block: number,
-  provider: JsonRpcProvider
+  provider: JsonRpcProvider,
+  options?: { includeLogs?: boolean }
 ): Promise<{ [txHash: string]: CallTrace }> => {
   const results = await axios
     .post(
@@ -71,7 +72,10 @@ export const getBlockTraces = async (
         method: "debug_traceBlockByNumber",
         params: [
           hex(block),
-          { tracer: "callTracer", tracerConfig: { withLog: true } },
+          {
+            tracer: "callTracer",
+            tracerConfig: options?.includeLogs === false ? undefined : { withLog: true },
+          },
         ],
         jsonrpc: "2.0",
         id: 1,
@@ -100,7 +104,8 @@ export const getBlockTraces = async (
 
 export const getTxTraces = async (
   txs: Tx[],
-  provider: JsonRpcProvider
+  provider: JsonRpcProvider,
+  options?: { includeLogs?: boolean }
 ): Promise<{ [txHash: string]: CallTrace }> => {
   if (txs.length === 1) {
     const { result } = await axios
@@ -110,7 +115,10 @@ export const getTxTraces = async (
           method: "debug_traceTransaction",
           params: [
             txs[0].hash,
-            { tracer: "callTracer", tracerConfig: { withLog: true } },
+            {
+              tracer: "callTracer",
+              tracerConfig: options?.includeLogs === false ? undefined : { withLog: true },
+            },
           ],
           jsonrpc: "2.0",
           id: 1,
@@ -134,7 +142,10 @@ export const getTxTraces = async (
           method: "debug_traceTransaction",
           params: [
             tx.hash,
-            { tracer: "callTracer", tracerConfig: { withLog: true } },
+            {
+              tracer: "callTracer",
+              tracerConfig: options?.includeLogs === false ? undefined : { withLog: true },
+            },
           ],
           jsonrpc: "2.0",
           id: i,
@@ -153,9 +164,12 @@ export const getTxTraces = async (
   }
 };
 
-export const getStateChange = (trace: CallTrace): StateChange => {
+export const getStateChange = (trace: CallTrace, logs?: Log[]): StateChange => {
   const state: StateChange = {};
-  internalParseCallTrace(state, trace);
+  if (trace.error || trace.revertReason) return state;
+
+  internalParseCallTrace(state, trace, false, logs);
+  if (logs !== undefined) handleERC20Logs(state, logs);
 
   return state;
 };
@@ -180,14 +194,15 @@ const normalizeTrace = (trace: CallTrace) => {
 const internalParseCallTrace = (
   state: StateChange,
   trace: CallTrace,
-  skipHandler?: boolean
+  skipHandler?: boolean,
+  logs?: Log[]
 ) => {
   if (!trace.error && !trace.revertReason) {
     if (trace.type === "call" && !skipHandler) {
       const handlers = getHandlers(trace);
       for (const { handle } of handlers) {
         try {
-          handle(state, trace);
+          handle(state, trace, logs);
         } catch (error: any) {
           if (error.message?.includes("data out-of-bounds")) {
             // We should skip this error since it's coming from selector overwrite
@@ -200,7 +215,7 @@ const internalParseCallTrace = (
 
     // Logs belong to their emitting frame, including delegatecalls. The
     // calldata duplicate-call heuristic must not suppress genuine events.
-    handleERC20Logs(state, trace.logs ?? []);
+    if (logs === undefined) handleERC20Logs(state, trace.logs ?? []);
 
     if (trace.type !== "staticcall") {
       for (const call of trace.calls ?? []) {
@@ -214,7 +229,7 @@ const internalParseCallTrace = (
             ? call.from === trace.from && call.to === trace.to
             : false;
 
-        internalParseCallTrace(state, call, skipHandler);
+        internalParseCallTrace(state, call, skipHandler, logs);
       }
     }
   }

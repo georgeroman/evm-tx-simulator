@@ -164,7 +164,64 @@ describe("ERC20 event transfers", () => {
   });
 });
 
+describe("supplied logs", () => {
+  it("uses receipt logs when the trace has no logs", () => {
+    expect(getStateChange(trace(), [transfer()])).toEqual(transferred());
+  });
+
+  it("replaces embedded logs across the entire call tree without mutating it", () => {
+    const call = trace({ logs: [transfer()], calls: [trace({ logs: [transfer()] })] });
+    const before = JSON.stringify(call);
+    expect(getStateChange(call, [transfer()])).toEqual(transferred());
+    expect(JSON.stringify(call)).toBe(before);
+  });
+
+  it("treats an empty supplied array as authoritative while keeping native balances", () => {
+    const call = trace({ value: "0xa", logs: [transfer()], calls: [trace({ logs: [transfer()] })] });
+    expect(getStateChange(call, [])).toEqual({
+      [sender]: { tokenBalanceState: { [native]: "-10" } },
+      [token]: { tokenBalanceState: { [native]: "10" } },
+    });
+  });
+
+  it.each(["error", "revertReason"])("ignores supplied logs when the transaction has %s", (field) => {
+    expect(getStateChange(trace({ [field]: "reverted" }), [transfer()])).toEqual({});
+  });
+
+  it("uses supplied NFT events to recognize nested transferFrom calls", () => {
+    const call = trace({ to: implementation, calls: [trace({
+      input: iface.encodeFunctionData("transferFrom", [sender, recipient, 10]),
+    })] });
+    const logs = [{ address: token, ...nftIface.encodeEventLog(nftIface.getEvent("Transfer"), [sender, recipient, 10]) }];
+    expect(getStateChange(call, logs)).toEqual(transferred("1", `erc721:${token}:10`));
+  });
+
+  it("does not use embedded NFT events when supplied logs are empty", () => {
+    const call = trace({
+      input: iface.encodeFunctionData("transferFrom", [sender, recipient, 10]),
+      calls: [trace({ type: "delegatecall", to: implementation, logs: [
+        { address: token, ...nftIface.encodeEventLog(nftIface.getEvent("Transfer"), [sender, recipient, 10]) },
+      ] })],
+    });
+    expect(getStateChange(call, [])).toEqual({});
+  });
+
+  it("preserves wrapping and avoids counting a matching Transfer twice", () => {
+    const logs = [event("Deposit", [sender, 20]), transfer(AddressZero, sender, "20")];
+    expect(getStateChange(trace(), logs)).toEqual(getStateChange(trace({ logs })));
+  });
+});
+
 describe("wrapped and native tokens", () => {
+  it.each([false, true])("does not count zkSync native ETH events as ERC20 balances (supplied logs: %s)", (supplied) => {
+    const logs = [event("Transfer", [sender, recipient, 10], "0x000000000000000000000000000000000000800a")];
+    const call = trace({ to: recipient, value: "0xa", ...(supplied ? {} : { logs }) });
+    expect(getStateChange(call, supplied ? logs : undefined)).toEqual({
+      [sender]: { tokenBalanceState: { [native]: "-10" } },
+      [recipient]: { tokenBalanceState: { [native]: "10" } },
+    });
+  });
+
   it("uses Deposit and Withdrawal events for wrapped balances", () => {
     const call = trace({ logs: [event("Deposit", [sender, 20]), event("Withdrawal", [sender, 5])] });
     expect(getStateChange(call)).toEqual({ [sender]: { tokenBalanceState: { [erc20]: "15" } } });

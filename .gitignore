@@ -14,5 +14,6 @@ yarn-error.log
 # Tests
 src/test.ts
 
-# Local comparison inputs, RPC credentials, and reports
+# Local comparison script, inputs, and reports
+scripts/compare-state-changes.cjs
 .local/

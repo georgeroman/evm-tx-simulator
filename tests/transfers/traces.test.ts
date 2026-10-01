@@ -67,4 +67,32 @@ describe("trace log collection", () => {
     ]);
     expect(Object.keys(result).sort()).toEqual(["0x1", "0x2"]);
   });
+
+  it("omits tracerConfig when block logs are disabled", async () => {
+    const post = jest.mocked(axios.post);
+    post.mockResolvedValueOnce({ data: { result: [{ txHash: "0x1", result: trace() }] } });
+    await getBlockTraces(1, provider, { includeLogs: false });
+    const body = JSON.parse(JSON.stringify(post.mock.calls[0][1]));
+    expect(body.params[1]).toEqual({ tracer: "callTracer" });
+  });
+
+  it("omits tracerConfig for a single transaction when logs are disabled", async () => {
+    const post = jest.mocked(axios.post);
+    post.mockResolvedValueOnce({ data: { result: trace() } });
+    await getTxTraces([{ hash: "0x1" }], provider, { includeLogs: false });
+    const body = JSON.parse(JSON.stringify(post.mock.calls[0][1]));
+    expect(body.params[1]).toEqual({ tracer: "callTracer" });
+  });
+
+  it("omits tracerConfig for all transactions in a batch when logs are disabled", async () => {
+    const post = jest.mocked(axios.post);
+    post.mockResolvedValueOnce({ data: [
+      { id: 0, result: trace() }, { id: 1, result: trace() },
+    ] });
+    await getTxTraces([{ hash: "0x1" }, { hash: "0x2" }], provider, { includeLogs: false });
+    const body = JSON.parse(JSON.stringify(post.mock.calls[0][1]));
+    expect(body.map((request: { params: unknown[] }) => request.params[1])).toEqual([
+      { tracer: "callTracer" }, { tracer: "callTracer" },
+    ]);
+  });
 });

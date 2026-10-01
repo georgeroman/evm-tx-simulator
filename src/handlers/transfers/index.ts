@@ -3,7 +3,7 @@ import { AddressZero } from "@ethersproject/constants";
 
 import { adjustBalance } from "./balances";
 import { hasERC721Transfer } from "./events";
-import type { CallHandler, CallTrace, StateChange } from "../../types";
+import type { CallHandler, CallTrace, Log, StateChange } from "../../types";
 import { bn, isPrecompile } from "../../utils";
 
 const zksyncL2EthIface = new Interface([
@@ -48,10 +48,10 @@ export const handlers: CallHandler[] = [
   // ERC721 "transferFrom"
   {
     selector: iface.getSighash("transferFrom"),
-    handle: (state: StateChange, trace: CallTrace) => {
+    handle: (state: StateChange, trace: CallTrace, logs?: Log[]) => {
       // This selector is shared with ERC20. Only parse NFT calldata when
       // an ERC721 Transfer event confirms the token type.
-      if (hasERC721Transfer(trace, trace.to)) {
+      if (hasERC721Transfer(trace, trace.to, logs)) {
         const args = iface.decodeFunctionData("transferFrom", trace.input);
         const token = `erc721:${trace.to}:${args.tokenId.toString()}`;
 

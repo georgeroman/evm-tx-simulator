@@ -15,9 +15,19 @@ ERC20 transfers are read from events, including WETH-style deposits and
 withdrawals. Native transfers use call values and calldata; NFT transfers use
 calldata. Reverted calls don't count toward balance changes.
 
-You'll need an RPC endpoint that supports `callTracer` with `withLog`. Logs are
-requested by default. You can disable them with `getCallTrace`'s
-`{ includeLogs: false }` option, but ERC20 balance changes require logs.
+Logs are requested by default, which requires an RPC endpoint that supports
+`callTracer` with `withLog`. If you already have the transaction's receipt logs,
+pass them to `getStateChange` and disable log collection when fetching the trace:
+
+```ts
+const traces = await getTxTraces([{ hash }], provider, { includeLogs: false });
+const changes = getStateChange(traces[hash], receipt.logs);
+```
+
+`getCallTrace` and `getBlockTraces` also accept `{ includeLogs: false }`. Supplied
+logs replace all logs embedded in the trace, including when you pass an empty
+array. Use the committed logs for that transaction; without supplied logs,
+`getStateChange` reads them from the trace.
 
 TypeScript types, including `Call` and `CallTrace`, can be imported from
 `@georgeroman/evm-tx-simulator/dist/types`.
@@ -46,31 +56,3 @@ increases; negative amounts are decreases. Amounts use the token's smallest unit
   }
 }
 ```
-
-To compare balance changes with solver's installed SDK, use
-`scripts/compare-state-changes.cjs`. Put request IDs, chain IDs, and transaction
-hashes from solver logs in `.local/relay-requests.json`:
-
-```json
-[
-  { "requestId": "<request-id>", "chainId": 1, "txHash": "<transaction-hash>" }
-]
-```
-
-Add tracing RPC URLs to `.local/rpcs.json`, keyed by chain ID, or set
-`RPC_URL_<chainId>` environment variables. Each RPC must support
-`debug_traceTransaction` with logs. The script checks those logs against the
-transaction receipt before comparing balances.
-
-```sh
-npm run build
-node scripts/compare-state-changes.cjs
-# Reuse the saved traces without making RPC requests:
-node scripts/compare-state-changes.cjs --offline
-```
-
-The report in `.local/state-change-comparison/report.json` includes Relay links,
-both SDK responses, and differences for each address and token. The baseline is
-the SDK installed in `../solver/packages/cross-chain-solver`; use `--old-sdk` to
-choose another package directory. Run with `--help` for all options.
-`.local/` is git-ignored so request samples, RPC credentials, and reports stay local.

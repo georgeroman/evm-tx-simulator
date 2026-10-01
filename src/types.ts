@@ -26,7 +26,7 @@ export interface CallTrace {
 
 export type CallHandler = {
   selector?: string;
-  handle: (state: StateChange, trace: CallTrace) => void;
+  handle: (state: StateChange, trace: CallTrace, logs?: Log[]) => void;
 };
 
 // Each `token` field below has the following format:

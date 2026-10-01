@@ -23,6 +23,11 @@ const depositTopic = iface.getEventTopic("Deposit");
 const withdrawalTopic = iface.getEventTopic("Withdrawal");
 
 const decodeEvent = (log: Log) => {
+  // zkSync's native ETH transfers are handled by the call handlers.
+  if (log.address.toLowerCase() === "0x000000000000000000000000000000000000800a") {
+    return;
+  }
+
   const topic = log.topics[0]?.toLowerCase();
   const name =
     topic === transferTopic
@@ -62,18 +67,23 @@ const decodeEvent = (log: Log) => {
   }
 };
 
-export const hasERC721Transfer = (trace: CallTrace, address: string): boolean => {
+export const hasERC721Transfer = (
+  trace: CallTrace,
+  address: string,
+  logs?: Log[]
+): boolean => {
   if (trace.error || trace.revertReason) return false;
 
   return (
-    (trace.logs ?? []).some(
+    (logs ?? trace.logs ?? []).some(
       (log) =>
         log.address.toLowerCase() === address.toLowerCase() &&
         log.topics[0]?.toLowerCase() === transferTopic &&
         log.topics.length === 4 &&
         log.topics.every((topic) => /^0x[0-9a-f]{64}$/i.test(topic)) &&
         log.data === "0x"
-    ) || (trace.calls ?? []).some((call) => hasERC721Transfer(call, address))
+    ) || (logs === undefined &&
+      (trace.calls ?? []).some((call) => hasERC721Transfer(call, address)))
   );
 };
 
