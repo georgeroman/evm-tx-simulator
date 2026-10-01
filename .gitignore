@@ -13,3 +13,6 @@ yarn-error.log
 
 # Tests
 src/test.ts
+
+# Local comparison inputs, RPC credentials, and reports
+.local/

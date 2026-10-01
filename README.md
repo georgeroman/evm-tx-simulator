@@ -1,8 +1,29 @@
 # `evm-tx-simulator`
 
-Simulate balance changes (`ETH`, `ERC20`, `ERC721` and `ERC1155`) resulted from running any potential EVM transaction.
+See how an EVM transaction changes ETH and token balances before sending it, or
+inspect the balance changes from an existing transaction. Supports native tokens,
+ERC20, ERC721, and ERC1155.
 
-Run via `npx ts-node ./src/index.ts` (see below an example output).
+There are four methods:
+
+- `getCallTrace` — simulate a transaction without submitting it.
+- `getTxTraces` — fetch traces for existing transactions.
+- `getBlockTraces` — fetch traces for every transaction in a block.
+- `getStateChange` — turn a trace into balance changes for each address.
+
+ERC20 transfers are read from events, including WETH-style deposits and
+withdrawals. Native transfers use call values and calldata; NFT transfers use
+calldata. Reverted calls don't count toward balance changes.
+
+You'll need an RPC endpoint that supports `callTracer` with `withLog`. Logs are
+requested by default. You can disable them with `getCallTrace`'s
+`{ includeLogs: false }` option, but ERC20 balance changes require logs.
+
+TypeScript types, including `Call` and `CallTrace`, can be imported from
+`@georgeroman/evm-tx-simulator/dist/types`.
+
+Here's an example of `getStateChange` output. Positive amounts are balance
+increases; negative amounts are decreases. Amounts use the token's smallest unit.
 
 ```json
 {
@@ -25,3 +46,31 @@ Run via `npx ts-node ./src/index.ts` (see below an example output).
   }
 }
 ```
+
+To compare balance changes with solver's installed SDK, use
+`scripts/compare-state-changes.cjs`. Put request IDs, chain IDs, and transaction
+hashes from solver logs in `.local/relay-requests.json`:
+
+```json
+[
+  { "requestId": "<request-id>", "chainId": 1, "txHash": "<transaction-hash>" }
+]
+```
+
+Add tracing RPC URLs to `.local/rpcs.json`, keyed by chain ID, or set
+`RPC_URL_<chainId>` environment variables. Each RPC must support
+`debug_traceTransaction` with logs. The script checks those logs against the
+transaction receipt before comparing balances.
+
+```sh
+npm run build
+node scripts/compare-state-changes.cjs
+# Reuse the saved traces without making RPC requests:
+node scripts/compare-state-changes.cjs --offline
+```
+
+The report in `.local/state-change-comparison/report.json` includes Relay links,
+both SDK responses, and differences for each address and token. The baseline is
+the SDK installed in `../solver/packages/cross-chain-solver`; use `--old-sdk` to
+choose another package directory. Run with `--help` for all options.
+`.local/` is git-ignored so request samples, RPC credentials, and reports stay local.
