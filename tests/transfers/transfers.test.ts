@@ -31,7 +31,7 @@ const nftIface = new Interface([
 ]);
 const trace = (overrides: Partial<CallTrace> = {}): CallTrace => ({
   type: "call", from: sender, to: token, input: "0x", output: "0x",
-  gas: "0x100000", gasUsed: "0x100", ...overrides,
+  gas: "0x100000", gasUsed: "0x100", logsIncluded: true, ...overrides,
 });
 const event = (name: string, args: unknown[], address = token): Log => ({
   address, ...iface.encodeEventLog(iface.getEvent(name), args),
@@ -165,8 +165,19 @@ describe("ERC20 event transfers", () => {
 });
 
 describe("supplied logs", () => {
+  it.each([
+    {},
+    { logs: [transfer()] },
+    { logsIncluded: false },
+    { error: "reverted" },
+    { revertReason: "reverted" },
+  ])("requires a log source even for raw or reverted traces: %j", (overrides) => {
+    expect(() => getStateChange(trace({ logsIncluded: undefined, ...overrides })))
+      .toThrow("getStateChange requires logs");
+  });
+
   it("uses receipt logs when the trace has no logs", () => {
-    expect(getStateChange(trace(), [transfer()])).toEqual(transferred());
+    expect(getStateChange(trace({ logsIncluded: false }), [transfer()])).toEqual(transferred());
   });
 
   it("replaces embedded logs across the entire call tree without mutating it", () => {
@@ -177,7 +188,7 @@ describe("supplied logs", () => {
   });
 
   it("treats an empty supplied array as authoritative while keeping native balances", () => {
-    const call = trace({ value: "0xa", logs: [transfer()], calls: [trace({ logs: [transfer()] })] });
+    const call = trace({ logsIncluded: false, value: "0xa", logs: [transfer()], calls: [trace({ logs: [transfer()] })] });
     expect(getStateChange(call, [])).toEqual({
       [sender]: { tokenBalanceState: { [native]: "-10" } },
       [token]: { tokenBalanceState: { [native]: "10" } },

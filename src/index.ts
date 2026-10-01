@@ -13,7 +13,7 @@ export const getCallTrace = async (
   options?: {
     block?: BlockTag;
     skipReverts?: boolean;
-    // Defaults to true. ERC20 balance changes require logs.
+    // Defaults to false. Enable to use getStateChange without supplied logs.
     includeLogs?: boolean;
   }
 ): Promise<CallTrace> => {
@@ -32,7 +32,7 @@ export const getCallTrace = async (
       : "latest",
     {
       tracer: "callTracer",
-      tracerConfig: options?.includeLogs === false ? undefined : { withLog: true },
+      tracerConfig: options?.includeLogs === true ? { withLog: true } : undefined,
       stateOverrides:
         call.balanceOverrides &&
         Object.fromEntries(
@@ -53,7 +53,7 @@ export const getCallTrace = async (
     throw new Error(`execution-reverted: ${JSON.stringify(trace.error)}`);
   }
 
-  return normalizeTrace(trace);
+  return normalizeTrace(trace, options?.includeLogs);
 };
 
 type Tx = {
@@ -74,7 +74,7 @@ export const getBlockTraces = async (
           hex(block),
           {
             tracer: "callTracer",
-            tracerConfig: options?.includeLogs === false ? undefined : { withLog: true },
+            tracerConfig: options?.includeLogs === true ? { withLog: true } : undefined,
           },
         ],
         jsonrpc: "2.0",
@@ -98,7 +98,7 @@ export const getBlockTraces = async (
     });
 
   return Object.fromEntries(
-    results.map(({ txHash, result }) => [txHash, normalizeTrace(result)])
+    results.map(({ txHash, result }) => [txHash, normalizeTrace(result, options?.includeLogs)])
   );
 };
 
@@ -117,7 +117,7 @@ export const getTxTraces = async (
             txs[0].hash,
             {
               tracer: "callTracer",
-              tracerConfig: options?.includeLogs === false ? undefined : { withLog: true },
+              tracerConfig: options?.includeLogs === true ? { withLog: true } : undefined,
             },
           ],
           jsonrpc: "2.0",
@@ -132,7 +132,7 @@ export const getTxTraces = async (
       .then((response) => response.data as { result: CallTrace });
 
     return {
-      [txs[0].hash]: normalizeTrace(result),
+      [txs[0].hash]: normalizeTrace(result, options?.includeLogs),
     };
   } else {
     const results = await axios
@@ -144,7 +144,7 @@ export const getTxTraces = async (
             tx.hash,
             {
               tracer: "callTracer",
-              tracerConfig: options?.includeLogs === false ? undefined : { withLog: true },
+              tracerConfig: options?.includeLogs === true ? { withLog: true } : undefined,
             },
           ],
           jsonrpc: "2.0",
@@ -159,12 +159,18 @@ export const getTxTraces = async (
       .then((response) => response.data as { id: number; result: CallTrace }[]);
 
     return Object.fromEntries(
-      results.map(({ id, result }) => [txs[id].hash, normalizeTrace(result)])
+      results.map(({ id, result }) => [txs[id].hash, normalizeTrace(result, options?.includeLogs)])
     );
   }
 };
 
 export const getStateChange = (trace: CallTrace, logs?: Log[]): StateChange => {
+  if (logs === undefined && trace.logsIncluded !== true) {
+    throw new Error(
+      "getStateChange requires logs: pass receipt logs (or [] if none), or fetch the trace with includeLogs: true"
+    );
+  }
+
   const state: StateChange = {};
   if (trace.error || trace.revertReason) return state;
 
@@ -176,7 +182,10 @@ export const getStateChange = (trace: CallTrace, logs?: Log[]): StateChange => {
 
 // Internal methods
 
-const normalizeTrace = (trace: CallTrace) => {
+const normalizeTrace = (trace: CallTrace, includeLogs = false) => {
+  // An event-free trace can omit `logs` even when withLog was enabled.
+  trace.logsIncluded = includeLogs;
+
   // Lowercase the `type`
   trace.type = trace.type.toLowerCase() as CallType;
 
@@ -186,7 +195,7 @@ const normalizeTrace = (trace: CallTrace) => {
   }
 
   for (const call of trace.calls ?? []) {
-    normalizeTrace(call);
+    normalizeTrace(call, includeLogs);
   }
   return trace;
 };

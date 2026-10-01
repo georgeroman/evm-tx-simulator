@@ -22,6 +22,8 @@ export interface CallTrace {
   revertReason?: string;
   calls?: CallTrace[];
   logs?: Log[];
+  // Set by the trace helpers when fetched with includeLogs: true, even if no events were emitted.
+  logsIncluded?: boolean;
 }
 
 export type CallHandler = {

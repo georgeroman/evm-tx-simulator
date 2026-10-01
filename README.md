@@ -15,19 +15,25 @@ ERC20 transfers are read from events, including WETH-style deposits and
 withdrawals. Native transfers use call values and calldata; NFT transfers use
 calldata. Reverted calls don't count toward balance changes.
 
-Logs are requested by default, which requires an RPC endpoint that supports
-`callTracer` with `withLog`. If you already have the transaction's receipt logs,
-pass them to `getStateChange` and disable log collection when fetching the trace:
+`getStateChange` requires logs. If you already have the transaction's receipt,
+pass its logs directly. The trace methods default to `includeLogs: false`:
 
 ```ts
-const traces = await getTxTraces([{ hash }], provider, { includeLogs: false });
+const traces = await getTxTraces([{ hash }], provider);
 const changes = getStateChange(traces[hash], receipt.logs);
 ```
 
-`getCallTrace` and `getBlockTraces` also accept `{ includeLogs: false }`. Supplied
-logs replace all logs embedded in the trace, including when you pass an empty
-array. Use the committed logs for that transaction; without supplied logs,
-`getStateChange` reads them from the trace.
+Otherwise, opt into fetching logs with the trace. This requires an RPC endpoint
+that supports `callTracer` with `withLog`:
+
+```ts
+const traces = await getTxTraces([{ hash }], provider, { includeLogs: true });
+const changes = getStateChange(traces[hash]);
+```
+
+`getCallTrace` and `getBlockTraces` accept the same `includeLogs` option.
+Without either source, `getStateChange` throws. Supplied logs replace all logs
+embedded in the trace; pass `[]` only when the transaction emitted no logs.
 
 TypeScript types, including `Call` and `CallTrace`, can be imported from
 `@georgeroman/evm-tx-simulator/dist/types`.
